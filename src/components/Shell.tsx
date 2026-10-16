@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { href } from '../hooks/useRoute';
 import { useData } from '../hooks/useDatabase';
 import { formatSpan } from '../lib/format';
-import { Mark, cx } from './ui';
+import { Mark, TestStrip, cx } from './ui';
 
 export const NAV = [
   { id: 'overview', label: 'Overview' },
@@ -17,6 +17,8 @@ export function Shell({ active, children }: { active: string; children: ReactNod
   const { db, sample, setSample } = useData();
   const tracking = db.settings.trackingEnabled;
   return (
+    <>
+    <TestStrip className="fixed inset-x-0 top-0 z-30 h-[3px]" />
     <div className="min-h-screen md:flex">
       <aside className="z-20 border-b border-line bg-ink md:sticky md:top-0 md:h-screen md:w-56 md:shrink-0 md:border-b-0 md:border-r">
         <div className="flex h-full flex-col px-4 py-4 md:px-6 md:py-8">
@@ -63,6 +65,7 @@ export function Shell({ active, children }: { active: string; children: ReactNod
         <div className="mx-auto max-w-[1040px] px-5 pb-24 pt-8 md:px-14 md:pt-14">{children}</div>
       </main>
     </div>
+    </>
   );
 }
 

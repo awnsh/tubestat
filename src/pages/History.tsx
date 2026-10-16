@@ -6,6 +6,7 @@ import { monthKey, monthRange, yearRange, type Range } from '../analytics/period
 import { formatDate, formatDuration, monthName } from '../lib/format';
 import { PageTitle } from '../components/Shell';
 import { Avatar, Button, Duration, Empty, Provenance, Scrubber, Section, Segmented, Thumb, cx } from '../components/ui';
+import { categoryColor } from '../lib/colors';
 import { Wrapped } from '../components/Wrapped';
 import { ShareDialog } from '../components/ShareDialog';
 
@@ -101,7 +102,7 @@ function PeriodPage({ range }: { range: Range }) {
         <>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             <div className="col-span-2 md:col-span-1">
-              <Duration seconds={d.summary.watchSeconds} className="hero-num block text-[51px]" />
+              <Duration animate seconds={d.summary.watchSeconds} className="hero-num block text-[51px]" />
               <p className="mt-2 text-[14px] text-dim">watched</p>
             </div>
             <Stat value={d.summary.videos.toLocaleString()} label="videos" />
@@ -133,7 +134,7 @@ function PeriodPage({ range }: { range: Range }) {
                       <span>{c.category}</span>
                       <span className="tnum text-dim">{Math.round(c.share * 100)}%</span>
                     </div>
-                    <Scrubber value={c.share} max={d.categories.items[0].share} head={i === 0} />
+                    <Scrubber value={c.share} max={d.categories.items[0].share} head={i === 0} color={categoryColor(c.category)} delay={i * 90} />
                   </li>
                 ))}
               </ul>

@@ -4,9 +4,14 @@
 
 /*
  * TubeStat tokens.
- * One accent — the red of YouTube's played-progress bar — used only for
- * "played" marks (the scrubber motif) and the OG badge. The warm grey
- * "buffer" tone is its partner for comparison marks.
+ *
+ * Red is YouTube's played-progress bar: the logo, "played" marks and today.
+ * The rest of the palette comes from the colour bars an old tube TV showed
+ * with no signal.
+ *   --color-cat-*   carry data (one per category family). Validated against
+ *                   the ink surface for lightness, contrast and colour-blind
+ *                   separation; categories are always labelled as well.
+ *   --color-bar-*   the vivid originals, for decoration only (the strip).
  */
 @theme {
   --color-ink: #111113;
@@ -21,8 +26,26 @@
   --color-buffer: rgb(242 240 235 / 0.26);
   --color-track: rgb(242 240 235 / 0.1);
 
+  --color-cat-blue: #5a82ff;
+  --color-cat-amber: #c17f00;
+  --color-cat-green: #27a352;
+  --color-cat-magenta: #e2489e;
+  --color-cat-cyan: #0f9cbc;
+  --color-cat-other: #6b6a66;
+
+  --color-bar-white: #e9e7e1;
+  --color-bar-yellow: #f5d90a;
+  --color-bar-cyan: #2cd4e0;
+  --color-bar-green: #3ddc84;
+  --color-bar-magenta: #e0429a;
+  --color-bar-red: #ff3040;
+  --color-bar-blue: #4d7cff;
+
   --font-sans: 'Inter Variable', Inter, system-ui, sans-serif;
   --font-display: 'Unbounded Variable', 'Unbounded', system-ui, sans-serif;
+
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @layer base {
@@ -77,10 +100,12 @@
   }
 }
 
+/* ---------- motion ---------- */
+
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -88,9 +113,10 @@
   }
 }
 .enter {
-  animation: fade-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: fade-in 460ms var(--ease-out-soft) both;
 }
 
+/* Progress fills play out left to right, like a playhead. */
 @keyframes grow-x {
   from {
     transform: scaleX(0);
@@ -101,12 +127,88 @@
 }
 .grow-x {
   transform-origin: left;
-  animation: grow-x 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: grow-x 800ms var(--ease-out-soft) both;
+}
+
+/* Chart bars rise from the baseline. */
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.grow-y {
+  transform-origin: bottom;
+  animation: grow-y 620ms var(--ease-out-soft) both;
+}
+
+/* Playheads land after their bar has filled. */
+@keyframes head-in {
+  from {
+    transform: translate(-50%, -50%) scale(0);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+.head-in {
+  animation: head-in 360ms var(--ease-pop) both;
+}
+
+/* Badges pop in. */
+@keyframes pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.pop {
+  animation: pop 420ms var(--ease-pop) both;
+}
+
+/* The colour-bar strip wipes in one bar at a time. */
+@keyframes bar-in {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.strip-bar {
+  transform-origin: top;
+  animation: bar-in 420ms var(--ease-out-soft) both;
+}
+
+/* Wrapped slides: the hero element rises, everything else follows. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 640ms var(--ease-out-soft) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .enter,
-  .grow-x {
+  .grow-x,
+  .grow-y,
+  .head-in,
+  .pop,
+  .strip-bar,
+  .rise {
     animation: none;
   }
 }

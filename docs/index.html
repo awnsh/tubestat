@@ -31,6 +31,16 @@
       --faint: #7e7c78;
       --play: #ff3040;
       --track: rgb(242 240 235 / 0.14);
+      /* The colour bars an old tube TV showed with no signal. */
+      --bar-white: #e9e7e1;
+      --bar-yellow: #f5d90a;
+      --bar-cyan: #2cd4e0;
+      --bar-green: #3ddc84;
+      --bar-magenta: #e0429a;
+      --bar-red: #ff3040;
+      --bar-blue: #4d7cff;
+      --ease: cubic-bezier(.2, .7, .2, 1);
+      --pop: cubic-bezier(.34, 1.56, .64, 1);
       --display: 'Unbounded', system-ui, sans-serif;
       --sans: 'Instrument Sans', system-ui, sans-serif;
     }
@@ -44,8 +54,19 @@
     .num { font-variant-numeric: tabular-nums; }
 
     /* Page scrubber: your scroll position is the playhead. */
-    .page-scrub { position: fixed; inset: 0 0 auto 0; height: 3px; background: var(--track); z-index: 50; }
-    .page-scrub i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--play); }
+    .page-scrub { position: fixed; inset: 0 0 auto 0; height: 4px; z-index: 50; display: flex; }
+    .page-scrub > span { flex: 1; opacity: .45; }
+    .page-scrub i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--play); box-shadow: 0 0 0 1px var(--ink); }
+
+    /* The colour-bar band: wipes in once, one bar at a time. */
+    .strip { display: flex; height: 12px; border-radius: 3px; overflow: hidden; }
+    .strip span { flex: 1; transform-origin: top; animation: bar-in .5s var(--ease) both; }
+    @keyframes bar-in { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+    .hero-strip { margin-top: 64px; }
+
+    /* Screens rise and settle as they scroll into view. */
+    .reveal { opacity: 0; transform: perspective(1400px) translateY(48px) rotateX(9deg); transition: opacity .8s var(--ease), transform 1s var(--ease); }
+    .reveal.in { opacity: 1; transform: none; }
     .page-scrub b { position: absolute; top: 50%; left: 0; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; background: var(--play); transform: scale(0); transition: transform .2s; }
     .page-scrub.moving b { transform: scale(1); }
 
@@ -68,7 +89,8 @@
     .textlink { color: var(--dim); font-size: 16px; text-underline-offset: 4px; }
     .textlink:hover { color: var(--paper); }
 
-    .live { border: 1px solid var(--line-strong); border-radius: 16px; padding: 26px 26px 24px; background: var(--raise); }
+    .live { position: relative; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 16px; padding: 30px 26px 24px; background: var(--raise); }
+    .live .strip { position: absolute; inset: 0 0 auto 0; height: 4px; border-radius: 0; }
     .live-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; color: var(--dim); }
     .live-state { color: var(--paper); }
     .live-state.paused { color: var(--faint); }
@@ -80,7 +102,7 @@
     .live p { margin: 18px 0 0; font-size: 15px; color: var(--dim); }
 
     .shot { border: 1px solid var(--line-strong); border-radius: 14px; overflow: hidden; background: var(--raise); }
-    .hero-shot { margin-top: 72px; }
+    .hero-shot { margin-top: 28px; }
 
     section { padding-top: 140px; }
     h2 { font: 600 clamp(30px, 4.2vw, 56px)/1.04 var(--display); letter-spacing: -0.035em; margin: 0; text-wrap: balance; }
@@ -98,7 +120,13 @@
     .err { min-height: 20px; margin: 8px 0 0; font-size: 14px; color: #ff7782; }
     .result { margin-top: 14px; padding-top: 24px; border-top: 1px solid var(--line); }
     .tier { display: inline-block; font: 700 13px/1 var(--display); letter-spacing: .07em; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--line-strong); color: var(--paper); transition: background .25s, border-color .25s; }
-    .tier.strong { background: var(--play); border-color: var(--play); color: #fff; }
+    .tier[data-tier="DAY ONE"] { background: var(--bar-red); border-color: var(--bar-red); color: #fff; }
+    .tier[data-tier="OG"] { background: var(--bar-yellow); border-color: var(--bar-yellow); color: #1a1600; }
+    .tier[data-tier="EARLY"] { background: var(--bar-cyan); border-color: var(--bar-cyan); color: #00191c; }
+    .tier.popping { animation: pop .45s var(--pop); }
+    @keyframes pop { from { transform: scale(.6); } to { transform: none; } }
+    .calc { --tier: var(--bar-red); }
+    .meter .scrub i, .meter .scrub b { background: var(--tier); }
     .verdict { font: 500 clamp(22px, 2.2vw, 27px)/1.3 var(--sans); letter-spacing: -0.015em; margin: 18px 0 0; min-height: 2.3em; }
     .meter { margin-top: 22px; }
     .meter .scrub i, .meter .scrub b { transition: width .35s cubic-bezier(.2,.7,.2,1), left .35s cubic-bezier(.2,.7,.2,1); }
@@ -111,7 +139,8 @@
 
     /* Wrapped player */
     .wrapped { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 64px; align-items: center; }
-    .player { position: relative; aspect-ratio: 1; border: 1px solid var(--line-strong); border-radius: 16px; overflow: hidden; background: var(--ink); cursor: pointer; }
+    .player { --slide: var(--bar-yellow); position: relative; aspect-ratio: 1; border: 2px solid var(--slide); border-radius: 16px; overflow: hidden; background: var(--ink); cursor: pointer; transition: border-color .6s var(--ease); }
+    .player-controls .num { color: var(--slide); }
     .player img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .5s; }
     .player img.on { opacity: 1; }
     .player-controls { display: flex; align-items: center; gap: 14px; margin-top: 16px; font-size: 14px; color: var(--dim); }
@@ -126,7 +155,9 @@
     .tabs button { position: relative; font: 500 16px/1 var(--sans); color: var(--dim); background: none; border: 0; padding: 14px 16px 18px; cursor: pointer; }
     .tabs button:hover { color: var(--paper); }
     .tabs button[aria-selected="true"] { color: var(--paper); }
-    .tabs button[aria-selected="true"]::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; background: var(--play); }
+    .tabs button[aria-selected="true"]::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 2px; background: var(--tab, var(--play)); animation: tab-in .35s var(--ease); }
+    @keyframes tab-in { from { transform: scaleX(0); } to { transform: none; } }
+    #tab-creators { --tab: var(--bar-cyan); } #tab-history { --tab: var(--bar-green); } #tab-insights { --tab: var(--bar-magenta); }
     .panel { display: grid; grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr); gap: 48px; align-items: start; margin-top: 36px; }
     .panel[hidden] { display: none; }
     .panel h3 { font: 600 24px/1.15 var(--display); letter-spacing: -0.03em; margin: 6px 0 14px; }
@@ -148,7 +179,9 @@
 
     ol.steps { list-style: none; padding: 0; margin: 48px 0 0; counter-reset: s; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
     ol.steps li { counter-increment: s; color: var(--dim); font-size: 16px; }
-    ol.steps li::before { content: counter(s); display: block; font: 600 40px/1 var(--display); color: var(--paper); margin-bottom: 12px; }
+    ol.steps li::before { content: counter(s); display: block; font: 600 40px/1 var(--display); color: var(--step); margin-bottom: 12px; }
+    ol.steps li:nth-child(1) { --step: var(--bar-yellow); } ol.steps li:nth-child(2) { --step: var(--bar-cyan); }
+    ol.steps li:nth-child(3) { --step: var(--bar-green); } ol.steps li:nth-child(4) { --step: var(--bar-magenta); }
     ol.steps strong { color: var(--paper); font-weight: 500; }
     code { font: 14px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--raise-2); padding: 2px 6px; border-radius: 5px; color: var(--paper); }
     .install-cta { margin-top: 56px; display: flex; flex-wrap: wrap; gap: 22px; align-items: center; }
@@ -179,12 +212,14 @@
     }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
-      .player img, .meter .scrub i, .meter .scrub b { transition: none; }
+      .player img, .meter .scrub i, .meter .scrub b, .player { transition: none; }
+      .strip span, .tier.popping, .tabs button::after { animation: none !important; }
+      .reveal { opacity: 1; transform: none; transition: none; }
     }
   </style>
 </head>
 <body>
-  <div class="page-scrub" aria-hidden="true"><i></i><b></b></div>
+  <div class="page-scrub" aria-hidden="true"><span style="background:var(--bar-white)"></span><span style="background:var(--bar-yellow)"></span><span style="background:var(--bar-cyan)"></span><span style="background:var(--bar-green)"></span><span style="background:var(--bar-magenta)"></span><span style="background:var(--bar-red)"></span><span style="background:var(--bar-blue)"></span><i></i><b></b></div>
   <div class="wrap">
     <header class="bar">
       <a class="mark" href="#top"><img src="assets/mark.svg" alt="" />TubeStat</a>
@@ -211,6 +246,7 @@
         </div>
 
         <aside class="live" aria-labelledby="live-label">
+          <div class="strip" aria-hidden="true"><span style="background:var(--bar-white)"></span><span style="background:var(--bar-yellow);animation-delay:60ms"></span><span style="background:var(--bar-cyan);animation-delay:120ms"></span><span style="background:var(--bar-green);animation-delay:180ms"></span><span style="background:var(--bar-magenta);animation-delay:240ms"></span><span style="background:var(--bar-red);animation-delay:300ms"></span><span style="background:var(--bar-blue);animation-delay:360ms"></span></div>
           <div class="live-top"><span id="live-label">You’ve watched this page for</span><span class="live-state" id="live-state">Playing</span></div>
           <div class="live-time num" id="live-time">0<span>m</span>00<span>s</span></div>
           <div class="scrub" aria-hidden="true"><i id="live-bar" style="width:0"></i><b id="live-head" style="left:0"></b></div>
@@ -218,6 +254,7 @@
         </aside>
       </div>
 
+      <div class="strip hero-strip" aria-hidden="true"><span style="background:var(--bar-white)"></span><span style="background:var(--bar-yellow);animation-delay:60ms"></span><span style="background:var(--bar-cyan);animation-delay:120ms"></span><span style="background:var(--bar-green);animation-delay:180ms"></span><span style="background:var(--bar-magenta);animation-delay:240ms"></span><span style="background:var(--bar-red);animation-delay:300ms"></span><span style="background:var(--bar-blue);animation-delay:360ms"></span></div>
       <div class="shot hero-shot"><img src="assets/overview.png" alt="TubeStat overview with sample data: 29 hours 1 minute watched this month across 117 videos and 20 creators, a daily bar chart, the top creator and top categories" width="2880" height="1800" /></div>
 
       <section id="early" aria-labelledby="early-h">
@@ -238,7 +275,7 @@
             </div>
             <p class="err" id="calc-err" role="alert"></p>
             <div class="result" aria-live="polite">
-              <span class="tier strong" id="tier">DAY ONE</span>
+              <span class="tier" id="tier" data-tier="DAY ONE">DAY ONE</span>
               <p class="verdict" id="verdict">You subscribed before 99% of their current audience.</p>
               <div class="meter">
                 <div class="scrub"><i id="meter-bar" style="width:0.4%"></i><b id="meter-head" style="left:0.4%"></b></div>
@@ -254,9 +291,9 @@
           </form>
 
           <div class="og-aside">
-            <p>The red marker is where you joined. Everything to its right is the audience that showed up after you.</p>
+            <p>The marker is where you joined. Everything to its right is the audience that showed up after you, and its color is your badge.</p>
             <p>Badges come from that share: DAY ONE before 99% of their audience, OG before 90%, EARLY before 60%. If YouTube can’t tell TubeStat the count on the day you subscribed, the badge is marked as an estimate.</p>
-            <div class="shot"><img src="assets/creator.png" alt="A creator page showing DAY ONE status, subscribed February 2020, 87 hours watched, and growth from 12.4K to 3.4M subscribers" loading="lazy" width="2880" height="1800" /></div>
+            <div class="shot reveal"><img src="assets/creator.png" alt="A creator page showing DAY ONE status, subscribed February 2020, 87 hours watched, and growth from 12.4K to 3.4M subscribers" loading="lazy" width="2880" height="1800" /></div>
           </div>
         </div>
       </section>
@@ -264,7 +301,7 @@
       <section id="wrapped" aria-labelledby="wrapped-h">
         <div class="wrapped">
           <div>
-            <div class="player" id="player" role="img" aria-label="TubeStat Wrapped for a sample month, shown as a sequence of slides">
+            <div class="player reveal" id="player" role="img" aria-label="TubeStat Wrapped for a sample month, shown as a sequence of slides">
               <img src="assets/wrapped-1.png" alt="" class="on" width="1240" height="1240" />
               <img src="assets/wrapped-2.png" alt="" width="1240" height="1240" />
               <img src="assets/wrapped-3.png" alt="" width="1240" height="1240" />
@@ -282,7 +319,7 @@
             <h2 id="wrapped-h">Wrapped, whenever you want it.</h2>
             <p class="sub">Don’t wait for December. Play back any month or year: your hours, your top five, the session that got away from you, the creator you found first.</p>
             <div class="card-row">
-              <div class="shot"><img src="assets/share-card.png" alt="A share card reading My YouTube, August 2026, with total watch time, top creator, top category and longest session" loading="lazy" width="1080" height="1350" /></div>
+              <div class="shot reveal"><img src="assets/share-card.png" alt="A share card reading My YouTube, August 2026, with total watch time, top creator, top category and longest session" loading="lazy" width="1080" height="1350" /></div>
               <p>Then turn it into a card sized for your feed.</p>
             </div>
           </div>
@@ -298,15 +335,15 @@
         </div>
         <div class="panel" role="tabpanel" id="panel-creators" aria-labelledby="tab-creators">
           <div><h3>Who you actually watch.</h3><p>Rank creators by hours, videos, or sessions, for this week or all time. The badges show where you got in early.</p></div>
-          <div class="shot"><img src="assets/creators.png" alt="Creators page ranking channels by watch time, with OG badges" loading="lazy" width="2880" height="1800" /></div>
+          <div class="shot reveal"><img src="assets/creators.png" alt="Creators page ranking channels by watch time, with OG badges" loading="lazy" width="2880" height="1800" /></div>
         </div>
         <div class="panel" role="tabpanel" id="panel-history" aria-labelledby="tab-history" hidden>
           <div><h3>Every month, kept.</h3><p>Each month gets its own page with its top creators and longest session. The Time Machine jumps back to any of them. Import Google Takeout to start with years of history.</p></div>
-          <div class="shot"><img src="assets/history.png" alt="History timeline with each month’s watch time" loading="lazy" width="2880" height="1800" /></div>
+          <div class="shot reveal"><img src="assets/history.png" alt="History timeline with each month’s watch time" loading="lazy" width="2880" height="1800" /></div>
         </div>
         <div class="panel" role="tabpanel" id="panel-insights" aria-labelledby="tab-insights" hidden>
           <div><h3>Patterns, in plain sentences.</h3><p>When you watch most, how gaming gave way to programming, which three creators take half your time. Written from your data, with no guesses about why.</p></div>
-          <div class="shot"><img src="assets/insights.png" alt="Insights page with sentences about viewing habits and a two-year category comparison" loading="lazy" width="2880" height="1800" /></div>
+          <div class="shot reveal"><img src="assets/insights.png" alt="Insights page with sentences about viewing habits and a two-year category comparison" loading="lazy" width="2880" height="1800" /></div>
         </div>
       </section>
 
@@ -440,7 +477,13 @@
         const after = Math.max(0, Math.min(1, 1 - then / now));
         const t = TIERS.find(([min]) => after >= min)?.[1] ?? 'RECENT';
         tier.textContent = t;
-        tier.classList.toggle('strong', t === 'DAY ONE' || t === 'OG');
+        if (tier.dataset.tier !== t) {
+          tier.dataset.tier = t;
+          tier.classList.remove('popping');
+          void tier.offsetWidth;
+          tier.classList.add('popping');
+        }
+        form.style.setProperty('--tier', { 'DAY ONE': 'var(--bar-red)', OG: 'var(--bar-yellow)', EARLY: 'var(--bar-cyan)' }[t] ?? 'var(--dim)');
         const mult = then > 0 ? now / then : null;
         const grown = mult && mult >= 2 ? `, and they’ve grown ${mult >= 10 ? Math.round(mult).toLocaleString() : mult.toFixed(1)}× since` : '';
         verdict.textContent = after < 0.01
@@ -469,10 +512,13 @@
       let playing = !reduced;
       let visible = false;
       let timer;
+      const COLORS = ['--bar-yellow', '--bar-cyan', '--bar-green', '--bar-magenta', '--bar-red', '--bar-yellow', '--bar-red'];
       const show = (n) => {
         frames[i].classList.remove('on');
         i = (n + frames.length) % frames.length;
         frames[i].classList.add('on');
+        player.parentElement.style.setProperty('--slide', `var(${COLORS[i]})`);
+        player.style.setProperty('--slide', `var(${COLORS[i]})`);
         pos.textContent = `${i + 1} of ${frames.length}`;
       };
       const schedule = () => {
@@ -484,6 +530,16 @@
       toggle.addEventListener('click', () => setPlaying(!playing));
       new IntersectionObserver(([e]) => { visible = e.isIntersecting; schedule(); }).observe(player);
       setPlaying(playing);
+    })();
+
+    // Screens rise into place the first time they scroll into view.
+    (() => {
+      const items = document.querySelectorAll('.reveal');
+      if (reduced || !('IntersectionObserver' in window)) { items.forEach((el) => el.classList.add('in')); return; }
+      const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      }), { rootMargin: '0px 0px -8% 0px' });
+      items.forEach((el) => io.observe(el));
     })();
 
     // Screen tabs, with arrow-key support.

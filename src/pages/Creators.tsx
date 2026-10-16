@@ -79,7 +79,7 @@ export function Creators() {
                         <span className="truncate text-[15px] group-hover:underline">{c.channelName}</span>
                         {og ? <OgBadge tier={og.tier} size="sm" /> : null}
                       </div>
-                      <Scrubber value={metricValue(c, metric)} max={max} className="mt-2 max-w-[420px]" animate={i < 12} />
+                      <Scrubber value={metricValue(c, metric)} max={max} className="mt-2 max-w-[420px]" animate={i < 12} delay={i * 45} />
                     </div>
                     <div className="tnum text-right">
                       <p className="text-[14px]">{metricText(c, metric)}</p>

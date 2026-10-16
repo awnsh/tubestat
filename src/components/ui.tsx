@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { durationParts } from '../lib/format';
 import type { OgTier } from '../analytics/og';
+import { STRIP, TIER_STYLE, avatarTone } from '../lib/colors';
 
 export function cx(...c: Array<string | false | null | undefined>) {
   return c.filter(Boolean).join(' ');
@@ -8,17 +9,15 @@ export function cx(...c: Array<string | false | null | undefined>) {
 
 /* ---------- identity ---------- */
 
-const AVATAR_TONES = ['#3a2f2b', '#2b3440', '#34302a', '#2d3a33', '#3b2c36', '#2f2f3b'];
-
 export function Avatar({ src, name, size = 40, className }: { src: string | null | undefined; name: string; size?: number; className?: string }) {
   const [failed, setFailed] = useState(false);
-  const tone = AVATAR_TONES[(name.charCodeAt(0) || 0) % AVATAR_TONES.length];
+  const tone = avatarTone(name);
   const style = { width: size, height: size };
   if (src && !failed) {
     return <img src={src} alt="" style={style} onError={() => setFailed(true)} className={cx('shrink-0 rounded-full object-cover bg-raise-2', className)} />;
   }
   return (
-    <div aria-hidden style={{ ...style, background: tone, fontSize: size * 0.4 }} className={cx('shrink-0 grid place-items-center rounded-full font-medium text-paper/85', className)}>
+    <div aria-hidden style={{ ...style, ...tone, fontSize: size * 0.4 }} className={cx('shrink-0 grid place-items-center rounded-full font-semibold', className)}>
       {name.trim().slice(0, 1).toUpperCase() || '?'}
     </div>
   );
@@ -35,11 +34,51 @@ export function Thumb({ src, className }: { src?: string; className?: string }) 
 
 /* ---------- numbers ---------- */
 
-/** "18h 32m" with the units set smaller than the digits. */
-export function Duration({ seconds, className, unitClass = 'text-[0.45em] font-medium text-dim ml-[0.06em] mr-[0.22em] tracking-normal' }: { seconds: number; className?: string; unitClass?: string }) {
+const prefersReducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Counts up to `target` with an ease-out, from wherever it last was. */
+export function useCountUp(target: number, duration = 900): number {
+  const [value, setValue] = useState(() => (prefersReducedMotion() ? target : 0));
+  const from = useRef(prefersReducedMotion() ? target : 0);
+  useEffect(() => {
+    if (prefersReducedMotion() || !Number.isFinite(target)) {
+      setValue(target);
+      from.current = target;
+      return;
+    }
+    const start = performance.now();
+    const origin = from.current;
+    let raf = 0;
+    const step = (t: number) => {
+      const p = Math.min(1, (t - start) / duration);
+      const v = origin + (target - origin) * (1 - Math.pow(1 - p, 3));
+      setValue(v);
+      from.current = v;
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
+}
+
+/** A whole number that counts up when it appears or changes. */
+export function CountUp({ value, className }: { value: number; className?: string }) {
+  const v = useCountUp(value);
+  return (
+    <span className={cx('tnum', className)} aria-label={value.toLocaleString()}>
+      {Math.round(v).toLocaleString()}
+    </span>
+  );
+}
+
+/** "18h 32m" with the units set smaller than the digits. `animate` counts it up. */
+export function Duration({ seconds, className, animate = false, unitClass = 'text-[0.45em] font-medium text-dim ml-[0.06em] mr-[0.22em] tracking-normal' }: { seconds: number; className?: string; animate?: boolean; unitClass?: string }) {
+  const counted = useCountUp(animate ? seconds : 0, 1100);
+  const shown = animate ? counted : seconds;
   return (
     <span className={cx('tnum', className)}>
-      {durationParts(seconds).map((p, i) => (
+      {durationParts(shown).map((p, i) => (
         <span key={i}>
           {p.value}
           <span className={unitClass}>{p.unit}</span>
@@ -63,13 +102,33 @@ export function Change({ value, suffix }: { value: number | null; suffix?: strin
 
 /* ---------- the scrubber motif ---------- */
 
-/** A YouTube-style progress bar: grey track, red "played" fill, optional playhead. */
-export function Scrubber({ value, max = 1, tone = 'play', head = false, className, animate = true }: { value: number; max?: number; tone?: 'play' | 'buffer'; head?: boolean; className?: string; animate?: boolean }) {
+/**
+ * A YouTube-style progress bar: grey track, coloured "played" fill, optional
+ * playhead. `color` overrides the tone (categories); `delay` staggers lists.
+ */
+export function Scrubber({ value, max = 1, tone = 'play', color, head = false, className, animate = true, delay = 0 }: { value: number; max?: number; tone?: 'play' | 'buffer'; color?: string; head?: boolean; className?: string; animate?: boolean; delay?: number }) {
   const pct = max > 0 ? Math.max(0, Math.min(1, value / max)) * 100 : 0;
+  const fill = color ?? (tone === 'play' ? 'var(--color-play)' : 'var(--color-buffer)');
   return (
     <div className={cx('relative h-[3px] w-full rounded-full bg-track', className)}>
-      <div className={cx('absolute inset-y-0 left-0 rounded-full', tone === 'play' ? 'bg-play' : 'bg-buffer', animate && 'grow-x')} style={{ width: `${pct}%` }} />
-      {head && pct > 0 ? <div className="absolute top-1/2 h-[11px] w-[11px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-play" style={{ left: `${pct}%` }} /> : null}
+      <div className={cx('absolute inset-y-0 left-0 rounded-full', animate && 'grow-x')} style={{ width: `${pct}%`, background: fill, animationDelay: `${delay}ms` }} />
+      {head && pct > 0 ? (
+        <div
+          className={cx('absolute top-1/2 h-[11px] w-[11px] -translate-x-1/2 -translate-y-1/2 rounded-full', animate && 'head-in')}
+          style={{ left: `${pct}%`, background: fill, animationDelay: `${delay + 650}ms` }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** The colour-bar strip from an old TV test card. Decorative. */
+export function TestStrip({ className, animate = true, style }: { className?: string; animate?: boolean; style?: CSSProperties }) {
+  return (
+    <div aria-hidden className={cx('flex overflow-hidden', className)} style={style}>
+      {STRIP.map((c, i) => (
+        <div key={c} className={cx('h-full flex-1', animate && 'strip-bar')} style={{ background: c, animationDelay: `${i * 55}ms` }} />
+      ))}
     </div>
   );
 }
@@ -127,16 +186,18 @@ export function Button({ children, onClick, variant = 'quiet', className, disabl
 
 /* ---------- honesty labels ---------- */
 
-export function OgBadge({ tier, size = 'md' }: { tier: OgTier; size?: 'sm' | 'md' | 'lg' }) {
-  const strong = tier === 'DAY ONE' || tier === 'OG';
+export function OgBadge({ tier, size = 'md', animate = false }: { tier: OgTier; size?: 'sm' | 'md' | 'lg'; animate?: boolean }) {
+  const style = TIER_STYLE[tier];
   return (
     <span
+      style={style ? { background: style.bg, color: style.fg } : undefined}
       className={cx(
         'inline-flex items-center rounded font-bold tracking-[0.06em]',
+        animate && 'pop',
         size === 'sm' && 'px-1.5 py-[1px] text-[10px]',
         size === 'md' && 'px-2 py-0.5 text-[11px]',
         size === 'lg' && 'px-3 py-1 text-[13px]',
-        strong ? 'bg-play text-white' : 'border border-line-strong text-paper/80',
+        !style && 'border border-line-strong text-paper/80',
       )}
     >
       {tier}

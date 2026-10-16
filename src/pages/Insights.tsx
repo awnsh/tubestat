@@ -13,6 +13,7 @@ import { BarChart, CompareBars } from '../components/charts';
 import type { OgTier } from '../analytics/og';
 
 const TIER_ORDER: OgTier[] = ['DAY ONE', 'OG', 'EARLY', 'ESTABLISHED', 'RECENT'];
+const WIN_COLORS = ['var(--color-bar-yellow)', 'var(--color-bar-cyan)', 'var(--color-bar-green)', 'var(--color-bar-magenta)', 'var(--color-bar-blue)', 'var(--color-bar-red)'];
 
 export function Insights() {
   const { analytics: a, db } = useData();
@@ -72,14 +73,14 @@ export function Insights() {
       <Section title="Your biggest wins" className="mt-20">
         {wins.length ? (
           <div className="grid gap-x-10 gap-y-10 md:grid-cols-2">
-            {wins.map((w) => {
+            {wins.map((w, wi) => {
               const ch = db.channels[w.channelId];
               return (
                 <a key={w.id} href={href('creators', w.channelId)} className="group flex gap-5">
                   <Avatar src={ch?.avatar} name={ch?.channelName ?? '?'} size={52} />
                   <div className="min-w-0">
                     <p className="text-[13px] text-dim">{w.title}</p>
-                    <p className="hero-num mt-1 text-[32px]">{w.headline}</p>
+                    <p className="hero-num mt-1 text-[32px]" style={{ color: WIN_COLORS[wi % WIN_COLORS.length] }}>{w.headline}</p>
                     <p className="mt-2 text-[14px] leading-relaxed text-paper/85 group-hover:underline">{w.detail}</p>
                     {w.estimate ? <p className="mt-1 text-[12px] text-faint">Estimate</p> : null}
                   </div>

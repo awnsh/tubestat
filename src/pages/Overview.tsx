@@ -5,7 +5,8 @@ import { elapsedComparable, previousRange, rangeFor, type PeriodKind } from '../
 import { generateInsights } from '../analytics/insights';
 import { formatDate, formatDuration, formatHour } from '../lib/format';
 import { PageTitle } from '../components/Shell';
-import { Avatar, Change, Duration, Scrubber, Section, Segmented, Thumb, Button, Provenance } from '../components/ui';
+import { Avatar, Change, CountUp, Duration, Scrubber, Section, Segmented, Thumb, Button, Provenance } from '../components/ui';
+import { categoryColor } from '../lib/colors';
 import { BarChart, type BarDatum } from '../components/charts';
 
 const PERIODS: Array<{ id: PeriodKind; label: string }> = [
@@ -104,11 +105,11 @@ export function Overview({ welcome }: { welcome?: boolean }) {
       {/* Headline numbers */}
       <div className="enter grid grid-cols-2 gap-x-8 gap-y-8 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
         <div className="col-span-2 md:col-span-1">
-          <Duration seconds={s.watchSeconds} className="hero-num block text-[61px] md:text-[77px]" />
+          <Duration animate seconds={s.watchSeconds} className="hero-num block text-[61px] md:text-[77px]" />
           <p className="mt-3 text-[14px] text-dim">watched</p>
         </div>
-        <Figure value={s.videos.toLocaleString()} label="videos" />
-        <Figure value={s.creators.toLocaleString()} label="creators" />
+        <Figure value={<CountUp value={s.videos} />} label="videos" />
+        <Figure value={<CountUp value={s.creators} />} label="creators" />
         {kind !== 'all' ? <Figure value={<Change value={change} />} label={VS[kind]} /> : <Figure value={streaks.longest.toLocaleString()} label="day longest streak" />}
       </div>
       {s.unknownTimeVideos ? <Provenance>{s.unknownTimeVideos.toLocaleString()} imported videos in this period have no recorded watch time, so they count as videos but not hours.</Provenance> : null}
@@ -143,7 +144,7 @@ export function Overview({ welcome }: { welcome?: boolean }) {
                     <span>{c.category}</span>
                     <span className="tnum text-dim">{Math.round(c.share * 100)}%</span>
                   </div>
-                  <Scrubber value={c.share} max={cats.items[0].share} head={i === 0} />
+                  <Scrubber value={c.share} max={cats.items[0].share} head={i === 0} color={categoryColor(c.category)} delay={i * 90} />
                 </li>
               ))}
             </ul>

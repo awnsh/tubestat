@@ -3,8 +3,23 @@ import { buildWrapped, type WrappedSlide } from '../analytics/wrapped';
 import type { Range } from '../analytics/periods';
 import { formatCompact, formatDate, formatDuration, formatSpan } from '../lib/format';
 import { useData } from '../hooks/useDatabase';
-import { Avatar, Duration, OgBadge, Scrubber, cx } from './ui';
+import { Avatar, Duration, OgBadge, Scrubber, TestStrip, cx } from './ui';
+import { categoryColor } from '../lib/colors';
 import { ShareDialog } from './ShareDialog';
+
+/** Each slide takes one test-pattern colour: the backdrop shifts to it and the slide's accents use it. */
+const SLIDE_COLOR: Record<WrappedSlide['kind'], string> = {
+  intro: 'var(--color-bar-red)',
+  total: 'var(--color-bar-yellow)',
+  creators: 'var(--color-bar-cyan)',
+  categories: 'var(--color-bar-green)',
+  session: 'var(--color-bar-magenta)',
+  video: 'var(--color-bar-blue)',
+  growth: 'var(--color-bar-red)',
+  facts: 'var(--color-bar-yellow)',
+  change: 'var(--color-bar-cyan)',
+  outro: 'var(--color-bar-red)',
+};
 
 /** Story-style Wrapped for a month or year. Arrow keys, click, or tap to advance. */
 export function Wrapped({ range, onClose }: { range: Range; onClose: () => void }) {
@@ -41,11 +56,17 @@ export function Wrapped({ range, onClose }: { range: Range; onClose: () => void 
   const topCreatorSlide = slides.find((s): s is Extract<WrappedSlide, { kind: 'creators' }> => s.kind === 'creators');
 
   return (
-    <div role="dialog" aria-modal aria-label={`${range.label} Wrapped`} className="fixed inset-0 z-50 flex flex-col bg-ink">
+    <div
+      role="dialog"
+      aria-modal
+      aria-label={`${range.label} Wrapped`}
+      className="fixed inset-0 z-50 flex flex-col transition-[background-color] duration-700"
+      style={{ background: `color-mix(in oklab, ${SLIDE_COLOR[slide.kind]} 13%, var(--color-ink))`, ["--slide" as string]: SLIDE_COLOR[slide.kind] }}
+    >
       <div className="mx-auto flex w-full max-w-2xl gap-1.5 px-6 pt-6">
         {slides.map((_, k) => (
           <button key={k} aria-label={`Slide ${k + 1}`} onClick={() => setI(k)} className="flex-1 py-2">
-            <Scrubber value={k <= i ? 1 : 0} animate={k === i} />
+            <Scrubber value={k <= i ? 1 : 0} animate={k === i} color="var(--slide)" />
           </button>
         ))}
       </div>
@@ -57,7 +78,7 @@ export function Wrapped({ range, onClose }: { range: Range; onClose: () => void 
       <div className="relative mx-auto flex w-full max-w-2xl flex-1 items-center px-6 pb-16">
         <button aria-label="Previous" onClick={prev} className="absolute inset-y-0 left-0 w-1/3" />
         <button aria-label="Next" onClick={next} className="absolute inset-y-0 right-0 w-2/3" />
-        <div key={i} className="enter pointer-events-none relative w-full">
+        <div key={i} className="rise pointer-events-none relative w-full">
           <SlideView slide={slide} />
           {slide.kind === 'outro' ? (
             <div className="pointer-events-auto mt-10 flex gap-3">
@@ -71,6 +92,7 @@ export function Wrapped({ range, onClose }: { range: Range; onClose: () => void 
           ) : null}
         </div>
       </div>
+      <TestStrip key={`strip-${i}`} className="h-1.5 w-full" />
 
       {sharing && outro ? (
         <ShareDialog
@@ -93,7 +115,7 @@ export function Wrapped({ range, onClose }: { range: Range; onClose: () => void 
 }
 
 function Kicker({ children }: { children: React.ReactNode }) {
-  return <p className="mb-6 text-[15px] text-dim">{children}</p>;
+  return <p className="mb-6 text-[15px] font-medium" style={{ color: 'var(--slide)' }}>{children}</p>;
 }
 
 function SlideView({ slide }: { slide: WrappedSlide }) {
@@ -110,7 +132,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
       return (
         <div>
           <Kicker>You spent</Kicker>
-          <Duration seconds={slide.seconds} className="hero-num block text-[clamp(58px,12.8vw,134px)]" />
+          <Duration animate seconds={slide.seconds} className="hero-num block text-[clamp(58px,12.8vw,134px)]" />
           <p className="mt-6 text-[22px] leading-snug text-paper">
             watching {slide.videos.toLocaleString()} videos from {slide.creators.toLocaleString()} creators, on {slide.days} different days.
           </p>
@@ -146,7 +168,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
                   <span className={cx('display', k === 0 ? 'text-[48px]' : 'text-[30px]')}>{c.category}</span>
                   <span className="tnum text-[18px] text-dim">{Math.round(c.share * 100)}%</span>
                 </div>
-                <Scrubber value={c.share} max={slide.items[0].share} head={k === 0} />
+                <Scrubber value={c.share} max={slide.items[0].share} head={k === 0} color={categoryColor(c.category)} delay={200 + k * 120} />
               </div>
             ))}
           </div>
@@ -157,7 +179,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
       return (
         <div>
           <Kicker>Your longest session</Kicker>
-          <Duration seconds={slide.session.watchSeconds} className="hero-num block text-[clamp(58px,12vw,120px)]" />
+          <Duration animate seconds={slide.session.watchSeconds} className="hero-num block text-[clamp(58px,12vw,120px)]" />
           <p className="mt-6 text-[22px]">{formatDate(slide.session.start, 'weekday')}, {slide.session.videos} videos in one sitting.</p>
         </div>
       );
@@ -180,7 +202,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
           <Kicker>You were early</Kicker>
           <div className="mb-6 flex items-center gap-4">
             <Avatar src={slide.creator.avatar} name={slide.creator.channelName} size={72} />
-            <OgBadge tier={og.tier} size="lg" />
+            <OgBadge tier={og.tier} size="lg" animate />
           </div>
           <p className="display text-[36px] leading-tight">{slide.creator.channelName}</p>
           <p className="mt-4 text-[20px] leading-snug">
@@ -217,7 +239,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
       return (
         <div>
           <Kicker>{slide.title}</Kicker>
-          <Duration seconds={slide.seconds} className="hero-num block text-[clamp(51px,9.6vw,96px)]" />
+          <Duration animate seconds={slide.seconds} className="hero-num block text-[clamp(51px,9.6vw,96px)]" />
           <dl className="mt-8 grid grid-cols-2 gap-6 text-[15px]">
             <div><dt className="text-dim">Videos</dt><dd className="tnum mt-1 text-[24px]">{slide.videos.toLocaleString()}</dd></div>
             {slide.topCreator ? <div><dt className="text-dim">Top creator</dt><dd className="mt-1 truncate text-[24px]">{slide.topCreator}</dd></div> : null}

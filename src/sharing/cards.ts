@@ -17,6 +17,8 @@ const C = {
 };
 
 const DISPLAY = '"Unbounded Variable", Unbounded, system-ui, sans-serif';
+/** Test-pattern bars for the card's top edge (canvas needs literal colours). */
+const STRIP = ['#e9e7e1', '#f5d90a', '#2cd4e0', '#3ddc84', '#e0429a', '#ff3040', '#4d7cff'];
 const SANS = '"Inter Variable", Inter, system-ui, sans-serif';
 
 export type CardSpec =
@@ -128,6 +130,10 @@ export async function renderCard(spec: CardSpec): Promise<HTMLCanvasElement> {
   const ctx = canvas.getContext('2d')!;
   ctx.fillStyle = C.bg;
   ctx.fillRect(0, 0, CARD_W, CARD_H);
+  STRIP.forEach((color, i) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.floor((i * CARD_W) / STRIP.length), 0, Math.ceil(CARD_W / STRIP.length), 16);
+  });
   ctx.textBaseline = 'alphabetic';
   const L = 88;
   const W = CARD_W - L * 2;

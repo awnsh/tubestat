@@ -43,8 +43,8 @@ export function BarChart({ data, format, height = 140, ariaLabel }: { data: BarD
                 aria-label={`${d.label}: ${format(d.value)}`}
               >
                 <div
-                  className={cx('w-full max-w-12 rounded-t-[3px] transition-colors', d.current ? 'bg-play' : hover === i ? 'bg-paper' : 'bg-buffer')}
-                  style={{ height: h }}
+                  className={cx('grow-y w-full max-w-12 rounded-t-[3px] transition-colors', d.current ? 'bg-play' : hover === i ? 'bg-paper' : 'bg-buffer')}
+                  style={{ height: h, animationDelay: `${Math.min(i * 22, 700)}ms` }}
                 />
               </div>
             );

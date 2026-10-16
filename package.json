@@ -1,7 +1,7 @@
 {
   "name": "tubestat",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Your YouTube life, tracked. A private, local-first YouTube tracker for Chrome.",
   "type": "module",
   "scripts": {

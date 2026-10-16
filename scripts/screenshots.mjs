@@ -28,9 +28,9 @@ await page.evaluate(() => localStorage.setItem('tubestat:preview-sample', '1'));
 async function shot(hash, file, { full = false, prep } = {}) {
   await page.goto(`${base}/dashboard.html#/${hash}`);
   await page.reload();
-  await page.addStyleTag({ content: 'main > div:first-child:has(> span > span) { display: none !important } .enter, .grow-x { animation: none !important }' });
-  await sleep(900);
-  if (prep) await prep();
+  await page.addStyleTag({ content: 'main > div:first-child:has(> span > span) { display: none !important } *, *::before, *::after { animation: none !important; transition: none !important }' });
+  await sleep(1500);
+  if (prep) { await prep(); await sleep(1300); }
   await page.screenshot({ path: join(out, file), fullPage: full });
   console.log('saved', file);
 }

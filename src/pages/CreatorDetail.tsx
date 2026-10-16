@@ -69,7 +69,7 @@ export function CreatorDetail({ channelId }: { channelId: string }) {
         <div className="min-w-0">
           <h1 className="display text-[36px] leading-none md:text-[53px]">{name}</h1>
           <div className="mt-4 flex flex-wrap items-center gap-3 text-[14px] text-dim">
-            {og ? <OgBadge tier={og.tier} size="lg" /> : null}
+            {og ? <OgBadge tier={og.tier} size="lg" animate /> : null}
             {ch?.handle ? <span>{ch.handle}</span> : null}
             {ch?.subscriberCount != null ? <span className="tnum">{formatCompact(ch.subscriberCount)} subscribers</span> : null}
             <a href={ch?.url ?? `https://www.youtube.com/channel/${channelId}`} target="_blank" rel="noreferrer" className="text-paper underline-offset-4 hover:underline">

@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { useDatabaseState } from '../hooks/useDatabase';
 import { elapsedComparable, previousRange, rangeFor } from '../analytics/periods';
 import { formatDuration } from '../lib/format';
-import { Avatar, Change, Duration, Scrubber } from '../components/ui';
+import { Avatar, Change, Duration, Scrubber, TestStrip } from '../components/ui';
+import { categoryColor } from '../lib/colors';
 
 /** A glance, not a dashboard: this week, top creator, top category. */
 export function Popup() {
@@ -32,7 +33,8 @@ export function Popup() {
   const { s, change, top, cat } = view;
 
   return (
-    <div className="w-[340px] bg-ink px-6 pb-6 pt-5 text-paper">
+    <div className="w-[340px] bg-ink px-6 pb-6 pt-6 text-paper">
+      <TestStrip className="fixed inset-x-0 top-0 h-[3px]" />
       <div className="flex items-center justify-between">
         <h1 className="display text-[18px]">Your YouTube</h1>
         <span className="flex items-center gap-1.5 text-[11px] text-dim">
@@ -42,7 +44,7 @@ export function Popup() {
       </div>
 
       <div className="mt-6">
-        <Duration seconds={s.watchSeconds} className="hero-num block text-[45px]" />
+        <Duration animate seconds={s.watchSeconds} className="hero-num block text-[45px]" />
         <div className="mt-2 flex items-baseline justify-between text-[13px] text-dim">
           <span>this week, {s.videos} videos</span>
           <Change value={change} />
@@ -71,7 +73,7 @@ export function Popup() {
               <p className="tnum text-[12px] text-dim">{Math.round(cat.share * 100)}%</p>
             </div>
             <p className="mt-1 text-[15px]">{cat.category}</p>
-            <Scrubber value={cat.share} head className="mt-2" />
+            <Scrubber value={cat.share} head color={categoryColor(cat.category)} className="mt-2" />
           </div>
         ) : null}
       </div>

@@ -37,9 +37,9 @@ for (const [hash, file, prep] of shots) {
   await page.goto(`${base}/dashboard.html#/${hash}`);
   await page.reload();
   // Hide the sample-data banner and settle animations for a clean frame.
-  await page.addStyleTag({ content: 'main > div:first-child:has(> span > span) { display: none !important } .enter, .grow-x { animation: none !important }' });
-  await sleep(900);
-  if (prep) await prep();
+  await page.addStyleTag({ content: 'main > div:first-child:has(> span > span) { display: none !important } *, *::before, *::after { animation: none !important; transition: none !important }' });
+  await sleep(1500);
+  if (prep) { await prep(); await sleep(1300); }
   await page.screenshot({ path: join(out, file) });
   console.log('saved', file);
 }
@@ -56,9 +56,9 @@ async function tile(w, h, logoW, line, lineSize, file) {
     body{margin:0;width:${w}px;height:${h}px;background:#111113;color:#f2f0eb;font-family:Inter,sans-serif;display:flex;flex-direction:column;justify-content:center;padding:0 ${Math.round(w * 0.08)}px;box-sizing:border-box;overflow:hidden}
     .logo svg{width:${logoW}px;height:auto;display:block}
     p{margin:${Math.round(h * 0.07)}px 0 0;font-size:${lineSize}px;color:#a19f9a;max-width:${Math.round(w * 0.8)}px;line-height:1.35}
-    .bar{position:absolute;left:0;right:0;bottom:0;height:${Math.max(4, Math.round(h * 0.018))}px;background:rgb(242 240 235/.12)}
-    .bar i{position:absolute;left:0;top:0;bottom:0;width:62%;background:#ff3040}
-  </style></head><body><div class="logo">${logo}</div><p>${line}</p><div class="bar"><i></i></div></body></html>`);
+    .bar{position:absolute;left:0;right:0;bottom:0;height:${Math.max(6, Math.round(h * 0.025))}px;display:flex}
+    .bar i{flex:1}
+  </style></head><body><div class="logo">${logo}</div><p>${line}</p><div class="bar">${["#e9e7e1","#f5d90a","#2cd4e0","#3ddc84","#e0429a","#ff3040","#4d7cff"].map((c) => `<i style="background:${c}"></i>`).join("")}</div></body></html>`);
   await promo.waitForTimeout(800);
   await promo.screenshot({ path: join(out, file) });
   console.log('saved', file);

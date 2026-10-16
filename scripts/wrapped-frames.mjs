@@ -19,7 +19,7 @@ await page.goto(`${base}/dashboard.html`);
 await page.evaluate(() => localStorage.setItem('tubestat:preview-sample', '1'));
 await page.goto(`${base}/dashboard.html#/history/2026-08`);
 await page.reload();
-await page.addStyleTag({ content: '.enter, .grow-x { animation: none !important } [aria-label="Next"], [aria-label="Previous"] { display: none }' });
+await page.addStyleTag({ content: '*, *::before, *::after { animation: none !important; transition: none !important } [aria-label="Next"], [aria-label="Previous"] { display: none }' });
 await page.waitForTimeout(800);
 await page.locator('button:has-text("Play your")').click();
 await page.waitForTimeout(400);
@@ -29,7 +29,7 @@ const keep = new Set([1, 2, 3, 4, 6, 7, 9]);
 for (let i = 0; i < count; i++) {
   await page.locator(`[aria-label="Slide ${i + 1}"]`).click();
   await page.mouse.move(2, 2);
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(1500);
   const file = join(out, `wrapped-${i}.png`);
   if (keep.has(i)) await page.screenshot({ path: file, type: 'png' });
   else rmSync(file, { force: true });
