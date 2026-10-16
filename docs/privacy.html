@@ -8,11 +8,11 @@
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Instrument+Sans:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root { --ink: #111113; --raise: #18181b; --line: rgb(242 240 235 / 0.08); --paper: #f2f0eb; --dim: #a19f9a; --play: #ff3040; }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--ink); color: var(--paper); font: 400 17px/1.7 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; background: var(--ink); color: var(--paper); font: 400 17px/1.7 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
     .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px 96px; }
     header { display: flex; justify-content: space-between; align-items: center; padding: 22px 0 56px; }
     .mark { display: inline-flex; gap: 10px; align-items: center; font: 28px/1 'Instrument Serif', Georgia, serif; color: inherit; text-decoration: none; }
@@ -26,8 +26,8 @@
     ul { padding-left: 20px; }
     li { margin: 6px 0; }
     a { color: var(--paper); }
-    .summary { border-left: 2px solid var(--play); padding: 4px 0 4px 20px; margin: 0; }
-    .summary p { color: var(--paper); margin: 0; }
+    .summary { margin: 0; }
+    .summary p { color: var(--paper); margin: 0; font-size: 21px; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -68,9 +68,9 @@
 
     <h2>Your choices</h2>
     <ul>
-      <li>Pause recording at any time in Profile → Tracking.</li>
-      <li>Export everything TubeStat has recorded as a JSON file from Profile → Your data.</li>
-      <li>Delete everything from Profile → Your data → Delete everything, or by removing the extension.</li>
+      <li>Pause recording at any time under Tracking on the Profile page.</li>
+      <li>Export everything TubeStat has recorded as a JSON file under Your data on the Profile page.</li>
+      <li>Delete all of it with Delete everything on the Profile page, or by removing the extension.</li>
     </ul>
 
     <h2>Website</h2>
