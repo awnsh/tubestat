@@ -12,7 +12,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
     if (!this.state.error) return this.props.children;
     return (
       <div className="max-w-xl">
-        <p className="display text-[34px] leading-tight">This page couldn’t be shown.</p>
+        <p className="statement text-[28px]">This page couldn’t be shown.</p>
         <p className="mt-4 text-[14px] leading-relaxed text-dim">
           Your data is safe; this is a display problem. Try another page, or reload. If it keeps happening, the message below helps pin it down.
         </p>

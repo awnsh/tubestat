@@ -16,7 +16,7 @@ const C = {
   accent: '#FF3040',
 };
 
-const SERIF = '"Instrument Serif", Georgia, serif';
+const DISPLAY = '"Unbounded Variable", Unbounded, system-ui, sans-serif';
 const SANS = '"Inter Variable", Inter, system-ui, sans-serif';
 
 export type CardSpec =
@@ -55,7 +55,7 @@ async function loadBitmap(url: string | null): Promise<ImageBitmap | null> {
 
 async function ensureFonts() {
   try {
-    await Promise.all([document.fonts.load(`120px ${SERIF}`), document.fonts.load(`600 48px ${SANS}`), document.fonts.load(`400 32px ${SANS}`)]);
+    await Promise.all([document.fonts.load(`600 80px ${DISPLAY}`), document.fonts.load(`600 48px ${SANS}`), document.fonts.load(`400 32px ${SANS}`)]);
   } catch {
     /* fall back to system fonts */
   }
@@ -72,7 +72,7 @@ function roundAvatar(ctx: CanvasRenderingContext2D, img: ImageBitmap | null, x: 
     ctx.fillStyle = '#26262A';
     ctx.fillRect(x, y, size, size);
     ctx.fillStyle = C.text;
-    ctx.font = `${size * 0.42}px ${SERIF}`;
+    ctx.font = `600 ${size * 0.38}px ${DISPLAY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(fallback.slice(0, 1).toUpperCase(), x + size / 2, y + size / 2 + size * 0.03);
@@ -110,11 +110,12 @@ function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number
 
 function footer(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = C.muted;
-  ctx.font = `500 26px ${SANS}`;
+  ctx.font = `600 24px ${DISPLAY}`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.fillText('TubeStat', 88, CARD_H - 80);
   ctx.textAlign = 'right';
+  ctx.font = `500 24px ${SANS}`;
   ctx.fillText('Your YouTube, tracked', CARD_W - 88, CARD_H - 80);
   ctx.textAlign = 'left';
 }
@@ -136,15 +137,15 @@ export async function renderCard(spec: CardSpec): Promise<HTMLCanvasElement> {
     ctx.font = `500 30px ${SANS}`;
     ctx.fillText(spec.eyebrow, L, 150);
     ctx.fillStyle = C.text;
-    const titleSize = fitText(ctx, spec.title, W, (s) => `${s}px ${SERIF}`, 112);
-    ctx.font = `${titleSize}px ${SERIF}`;
+    const titleSize = fitText(ctx, spec.title, W, (s) => `600 ${s}px ${DISPLAY}`, 76);
+    ctx.font = `600 ${titleSize}px ${DISPLAY}`;
     ctx.fillText(spec.title, L, 150 + titleSize + 10);
 
     // Hero number.
     const dur = formatDuration(spec.watchSeconds);
-    ctx.font = `600 190px ${SANS}`;
-    const heroSize = fitText(ctx, dur, W, (s) => `600 ${s}px ${SANS}`, 190, 90);
-    ctx.font = `600 ${heroSize}px ${SANS}`;
+    ctx.font = `600 150px ${DISPLAY}`;
+    const heroSize = fitText(ctx, dur, W, (s) => `600 ${s}px ${DISPLAY}`, 150, 80);
+    ctx.font = `600 ${heroSize}px ${DISPLAY}`;
     ctx.fillText(dur, L - 6, 560);
     ctx.fillStyle = C.muted;
     ctx.font = `400 34px ${SANS}`;
@@ -184,12 +185,12 @@ export async function renderCard(spec: CardSpec): Promise<HTMLCanvasElement> {
     roundAvatar(ctx, img, L, 210, 200, spec.creator);
 
     ctx.fillStyle = C.text;
-    const nameSize = fitText(ctx, spec.creator, W, (s) => `${s}px ${SERIF}`, 124, 56);
-    ctx.font = `${nameSize}px ${SERIF}`;
+    const nameSize = fitText(ctx, spec.creator, W, (s) => `600 ${s}px ${DISPLAY}`, 88, 44);
+    ctx.font = `600 ${nameSize}px ${DISPLAY}`;
     ctx.fillText(ellipsize(ctx, spec.creator, W), L, 520);
 
     // Tier badge.
-    ctx.font = `700 30px ${SANS}`;
+    ctx.font = `700 28px ${DISPLAY}`;
     const tw = ctx.measureText(spec.tier).width + 48;
     ctx.fillStyle = C.accent;
     ctx.beginPath();

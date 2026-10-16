@@ -58,7 +58,7 @@ export function Creators() {
             <Avatar src={first.avatar} name={first.channelName} size={112} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3">
-                <p className="display truncate text-[48px] leading-none md:text-[64px] group-hover:underline group-hover:decoration-1 group-hover:underline-offset-8">{first.channelName}</p>
+                <p className="display truncate text-[34px] leading-none md:text-[45px] group-hover:underline group-hover:decoration-1 group-hover:underline-offset-8">{first.channelName}</p>
               </div>
               <p className="tnum mt-3 text-[18px]">
                 {metricText(first, metric)} <span className="text-dim">and {second(first)}</span>

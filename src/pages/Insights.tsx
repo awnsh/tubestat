@@ -38,7 +38,7 @@ export function Insights() {
       {insights.length ? (
         <ul className="enter space-y-8">
           {insights.map((i, k) => (
-            <li key={i.id} className={k === 0 ? 'display max-w-3xl text-[40px] leading-[1.1]' : 'display max-w-3xl text-[28px] leading-[1.15] text-paper/90'}>
+            <li key={i.id} className={k === 0 ? 'statement max-w-3xl text-[34px]' : 'statement max-w-3xl text-[24px] text-paper/85'}>
               {i.text}
             </li>
           ))}
@@ -79,7 +79,7 @@ export function Insights() {
                   <Avatar src={ch?.avatar} name={ch?.channelName ?? '?'} size={52} />
                   <div className="min-w-0">
                     <p className="text-[13px] text-dim">{w.title}</p>
-                    <p className="hero-num mt-1 text-[40px]">{w.headline}</p>
+                    <p className="hero-num mt-1 text-[32px]">{w.headline}</p>
                     <p className="mt-2 text-[14px] leading-relaxed text-paper/85 group-hover:underline">{w.detail}</p>
                     {w.estimate ? <p className="mt-1 text-[12px] text-faint">Estimate</p> : null}
                   </div>
@@ -146,11 +146,11 @@ export function Insights() {
           <dl className="grid grid-cols-2 gap-8">
             <div>
               <dt className="text-[13px] text-dim">Current watching streak</dt>
-              <dd className="hero-num mt-2 text-[48px]">{streaks.current}<span className="ml-1 text-[16px] font-normal tracking-normal text-dim">days</span></dd>
+              <dd className="hero-num mt-2 text-[38px]">{streaks.current}<span className="ml-1 text-[16px] font-normal tracking-normal text-dim">days</span></dd>
             </div>
             <div>
               <dt className="text-[13px] text-dim">Longest</dt>
-              <dd className="hero-num mt-2 text-[48px]">{streaks.longest}<span className="ml-1 text-[16px] font-normal tracking-normal text-dim">days</span></dd>
+              <dd className="hero-num mt-2 text-[38px]">{streaks.longest}<span className="ml-1 text-[16px] font-normal tracking-normal text-dim">days</span></dd>
               {streaks.longestEnd ? <p className="mt-1 text-[12px] text-faint">ended {formatDate(streaks.longestEnd, 'short')}</p> : null}
             </div>
             <div className="col-span-2">
@@ -177,19 +177,19 @@ export function Insights() {
       <Section title="Shorts and long-form" className="mt-20">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           <div>
-            <p className="hero-num text-[40px]">{s.longform.toLocaleString()}</p>
+            <p className="hero-num text-[32px]">{s.longform.toLocaleString()}</p>
             <p className="mt-2 text-[13px] text-dim">long-form videos</p>
           </div>
           <div>
-            <p className="hero-num text-[40px]">{s.shorts.toLocaleString()}</p>
+            <p className="hero-num text-[32px]">{s.shorts.toLocaleString()}</p>
             <p className="mt-2 text-[13px] text-dim">Shorts</p>
           </div>
           <div>
-            <p className="hero-num text-[40px]">{s.startedLong ? `${Math.round((s.completedLong / s.startedLong) * 100)}%` : '—'}</p>
+            <p className="hero-num text-[32px]">{s.startedLong ? `${Math.round((s.completedLong / s.startedLong) * 100)}%` : '—'}</p>
             <p className="mt-2 text-[13px] text-dim">of long videos finished</p>
           </div>
           <div>
-            <p className="hero-num text-[40px]">{s.longform ? formatDuration(a.watches.filter((w) => !w.isShort && w.watchedSeconds).reduce((x, w) => x + (w.watchedSeconds ?? 0), 0) / Math.max(1, a.watches.filter((w) => !w.isShort && w.watchedSeconds).length)) : '—'}</p>
+            <p className="hero-num text-[32px]">{s.longform ? formatDuration(a.watches.filter((w) => !w.isShort && w.watchedSeconds).reduce((x, w) => x + (w.watchedSeconds ?? 0), 0) / Math.max(1, a.watches.filter((w) => !w.isShort && w.watchedSeconds).length)) : '—'}</p>
             <p className="mt-2 text-[13px] text-dim">average time per long video</p>
           </div>
         </div>

@@ -102,7 +102,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
       return (
         <div>
           <Kicker>TubeStat Wrapped</Kicker>
-          <h1 className="display text-[clamp(56px,11vw,120px)]">{slide.title}</h1>
+          <h1 className="display text-[clamp(39px,7.7vw,84px)]">{slide.title}</h1>
           <p className="mt-8 text-[15px] text-dim">Tap or press → to begin.</p>
         </div>
       );
@@ -110,7 +110,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
       return (
         <div>
           <Kicker>You spent</Kicker>
-          <Duration seconds={slide.seconds} className="hero-num block text-[clamp(72px,16vw,168px)]" />
+          <Duration seconds={slide.seconds} className="hero-num block text-[clamp(58px,12.8vw,134px)]" />
           <p className="mt-6 text-[22px] leading-snug text-paper">
             watching {slide.videos.toLocaleString()} videos from {slide.creators.toLocaleString()} creators, on {slide.days} different days.
           </p>
@@ -157,7 +157,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
       return (
         <div>
           <Kicker>Your longest session</Kicker>
-          <Duration seconds={slide.session.watchSeconds} className="hero-num block text-[clamp(72px,15vw,150px)]" />
+          <Duration seconds={slide.session.watchSeconds} className="hero-num block text-[clamp(58px,12vw,120px)]" />
           <p className="mt-6 text-[22px]">{formatDate(slide.session.start, 'weekday')}, {slide.session.videos} videos in one sitting.</p>
         </div>
       );
@@ -166,7 +166,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
         <div>
           <Kicker>The video you spent the most time with</Kicker>
           {slide.video.thumbnail ? <img src={slide.video.thumbnail} alt="" className="mb-6 aspect-video w-full max-w-md rounded-lg object-cover" /> : null}
-          <p className="display text-[40px] leading-tight">{slide.video.title || 'Untitled video'}</p>
+          <p className="statement text-[32px]">{slide.video.title || 'Untitled video'}</p>
           <p className="mt-3 text-[16px] text-dim">
             {slide.video.channelName} · {formatDuration(slide.video.watchSeconds)}
             {slide.video.views > 1 ? `, watched ${slide.video.views} times` : ''}
@@ -182,7 +182,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
             <Avatar src={slide.creator.avatar} name={slide.creator.channelName} size={72} />
             <OgBadge tier={og.tier} size="lg" />
           </div>
-          <p className="display text-[52px] leading-tight">{slide.creator.channelName}</p>
+          <p className="display text-[36px] leading-tight">{slide.creator.channelName}</p>
           <p className="mt-4 text-[20px] leading-snug">
             {formatCompact(og.subscribersThen)} subscribers when you joined, {formatCompact(og.subscribersNow)} now.
             That’s {og.growthMultiple! >= 10 ? Math.round(og.growthMultiple!) : og.growthMultiple!.toFixed(1)}× in {formatSpan(Date.now() - og.subscribedAt)}.
@@ -197,7 +197,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
           <Kicker>A few more things</Kicker>
           <ul className="space-y-5">
             {slide.facts.map((f) => (
-              <li key={f} className="display text-[34px] leading-tight">{f}</li>
+              <li key={f} className="statement text-[28px]">{f}</li>
             ))}
           </ul>
         </div>
@@ -208,7 +208,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
           <Kicker>Compared with before</Kicker>
           <ul className="space-y-5">
             {slide.lines.map((f) => (
-              <li key={f} className="display text-[40px] leading-tight">{f}</li>
+              <li key={f} className="statement text-[32px]">{f}</li>
             ))}
           </ul>
         </div>
@@ -217,7 +217,7 @@ function SlideView({ slide }: { slide: WrappedSlide }) {
       return (
         <div>
           <Kicker>{slide.title}</Kicker>
-          <Duration seconds={slide.seconds} className="hero-num block text-[clamp(64px,12vw,120px)]" />
+          <Duration seconds={slide.seconds} className="hero-num block text-[clamp(51px,9.6vw,96px)]" />
           <dl className="mt-8 grid grid-cols-2 gap-6 text-[15px]">
             <div><dt className="text-dim">Videos</dt><dd className="tnum mt-1 text-[24px]">{slide.videos.toLocaleString()}</dd></div>
             {slide.topCreator ? <div><dt className="text-dim">Top creator</dt><dd className="mt-1 truncate text-[24px]">{slide.topCreator}</dd></div> : null}

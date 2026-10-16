@@ -3,7 +3,7 @@
   "name": "TubeStat: Watch Time Tracker for YouTube",
   "short_name": "TubeStat",
   "homepage_url": "https://awnsh.github.io/tubestat/",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A private record of how you watch YouTube: watch time, top creators, history, and how early you found them. Stays on your device.",
   "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
   "action": { "default_popup": "popup.html", "default_title": "TubeStat", "default_icon": { "16": "icons/16.png", "32": "icons/32.png" } },

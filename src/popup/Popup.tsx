@@ -34,7 +34,7 @@ export function Popup() {
   return (
     <div className="w-[340px] bg-ink px-6 pb-6 pt-5 text-paper">
       <div className="flex items-center justify-between">
-        <h1 className="display text-[26px]">Your YouTube</h1>
+        <h1 className="display text-[18px]">Your YouTube</h1>
         <span className="flex items-center gap-1.5 text-[11px] text-dim">
           <span className={db.settings.trackingEnabled && !sample ? 'h-1.5 w-1.5 rounded-full bg-play' : 'h-1.5 w-1.5 rounded-full bg-faint'} />
           {sample ? 'Sample' : db.settings.trackingEnabled ? 'Tracking' : 'Paused'}
@@ -42,7 +42,7 @@ export function Popup() {
       </div>
 
       <div className="mt-6">
-        <Duration seconds={s.watchSeconds} className="hero-num block text-[56px]" />
+        <Duration seconds={s.watchSeconds} className="hero-num block text-[45px]" />
         <div className="mt-2 flex items-baseline justify-between text-[13px] text-dim">
           <span>this week, {s.videos} videos</span>
           <Change value={change} />

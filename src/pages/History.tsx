@@ -47,7 +47,7 @@ function Timeline() {
       {years.map((y) => (
         <section key={y.year}>
           <div className="mb-4 flex items-baseline justify-between border-b border-line pb-4">
-            <a href={href('history', String(y.year))} className="display text-[56px] leading-none hover:underline hover:decoration-1 hover:underline-offset-8">{y.year}</a>
+            <a href={href('history', String(y.year))} className="display text-[39px] leading-none hover:underline hover:decoration-1 hover:underline-offset-8">{y.year}</a>
             <div className="text-right text-[14px] text-dim">
               <span className="tnum text-paper">{formatDuration(y.summary.watchSeconds)}</span> across {y.summary.videos.toLocaleString()} videos
               {y.year < thisYear || new Date().getMonth() === 11 ? (
@@ -59,7 +59,7 @@ function Timeline() {
             {y.months.map((m) => (
               <li key={m.key}>
                 <a href={href('history', m.key)} className="group grid grid-cols-[120px_1fr_auto] items-center gap-6 py-3 md:grid-cols-[160px_1fr_120px_110px]">
-                  <span className="display text-[28px] group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">{monthName(m.range.start ? new Date(m.range.start).getMonth() : 0)}</span>
+                  <span className="display text-[20px] group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">{monthName(m.range.start ? new Date(m.range.start).getMonth() : 0)}</span>
                   <Scrubber value={m.summary.watchSeconds || m.summary.videos} max={m.summary.watchSeconds ? max : Math.max(...y.months.map((x) => x.summary.videos))} tone={m.summary.watchSeconds ? 'play' : 'buffer'} animate={false} />
                   <span className="tnum text-right text-[15px]">{m.summary.watchSeconds ? formatDuration(m.summary.watchSeconds) : '—'}</span>
                   <span className="tnum hidden text-right text-[13px] text-dim md:block">{m.summary.videos.toLocaleString()} videos</span>
@@ -86,7 +86,7 @@ function PeriodPage({ range }: { range: Range }) {
     <>
       <a href={href('history')} className="text-[13px] text-dim hover:text-paper">History</a>
       <header className="mt-6 mb-12 flex flex-wrap items-end justify-between gap-6">
-        <h1 className="display text-[56px] leading-none md:text-[88px]">{range.label}</h1>
+        <h1 className="display text-[39px] leading-none md:text-[62px]">{range.label}</h1>
         {d.summary.videos ? (
           <div className="flex gap-2">
             <Button variant="primary" onClick={() => setWrapped(true)}>Play your {short}</Button>
@@ -101,7 +101,7 @@ function PeriodPage({ range }: { range: Range }) {
         <>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             <div className="col-span-2 md:col-span-1">
-              <Duration seconds={d.summary.watchSeconds} className="hero-num block text-[64px]" />
+              <Duration seconds={d.summary.watchSeconds} className="hero-num block text-[51px]" />
               <p className="mt-2 text-[14px] text-dim">watched</p>
             </div>
             <Stat value={d.summary.videos.toLocaleString()} label="videos" />
@@ -118,7 +118,7 @@ function PeriodPage({ range }: { range: Range }) {
                     <a href={href('creators', c.channelId)} className="group flex items-center gap-4">
                       <span className="tnum w-4 text-[13px] text-faint">{i + 1}</span>
                       <Avatar src={c.avatar} name={c.channelName} size={i === 0 ? 48 : 36} />
-                      <span className={cx('min-w-0 flex-1 truncate group-hover:underline', i === 0 ? 'display text-[28px]' : 'text-[15px]')}>{c.channelName}</span>
+                      <span className={cx('min-w-0 flex-1 truncate group-hover:underline', i === 0 ? 'display text-[20px]' : 'text-[15px]')}>{c.channelName}</span>
                       <span className="tnum text-[13px] text-dim">{c.watchSeconds ? formatDuration(c.watchSeconds) : `${c.videos} videos`}</span>
                     </a>
                   </li>
@@ -141,7 +141,7 @@ function PeriodPage({ range }: { range: Range }) {
             <Section title="Longest session">
               {d.longestSession ? (
                 <>
-                  <Duration seconds={d.longestSession.watchSeconds} className="hero-num block text-[48px]" />
+                  <Duration seconds={d.longestSession.watchSeconds} className="hero-num block text-[38px]" />
                   <p className="mt-2 text-[14px] text-dim">{formatDate(d.longestSession.start, 'weekday')}, {d.longestSession.videos} videos</p>
                 </>
               ) : (
@@ -206,7 +206,7 @@ function PeriodPage({ range }: { range: Range }) {
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div className="self-end">
-      <p className="hero-num text-[40px]">{value}</p>
+      <p className="hero-num text-[32px]">{value}</p>
       <p className="mt-2 text-[14px] text-dim">{label}</p>
     </div>
   );
@@ -229,7 +229,7 @@ function TimeMachine() {
     <div>
       <div className="mb-3 flex flex-wrap gap-2">
         {[...years].reverse().map((y) => (
-          <button key={y.year} onClick={() => { setYear(y.year); setMonthK(null); }} className={cx('display rounded-md px-3 py-1 text-[28px] leading-tight transition-colors', y.year === year ? 'text-paper' : 'text-faint hover:text-dim')}>
+          <button key={y.year} onClick={() => { setYear(y.year); setMonthK(null); }} className={cx('display rounded-md px-3 py-1 text-[20px] leading-tight transition-colors', y.year === year ? 'text-paper' : 'text-faint hover:text-dim')}>
             {y.year}
           </button>
         ))}
@@ -249,9 +249,9 @@ function TimeMachine() {
 
       <div key={key} className="enter grid gap-12 md:grid-cols-[1.1fr_1fr]">
         <div>
-          <p className="display text-[48px] leading-none">{monthRange(key).label}</p>
+          <p className="display text-[34px] leading-none">{monthRange(key).label}</p>
           <p className="mt-8 text-[14px] text-dim">You watched</p>
-          {d.summary.watchSeconds ? <Duration seconds={d.summary.watchSeconds} className="hero-num mt-2 block text-[72px]" /> : <p className="hero-num mt-2 text-[72px]">{d.summary.videos}</p>}
+          {d.summary.watchSeconds ? <Duration seconds={d.summary.watchSeconds} className="hero-num mt-2 block text-[58px]" /> : <p className="hero-num mt-2 text-[58px]">{d.summary.videos}</p>}
           <p className="mt-3 text-[18px]">{d.summary.watchSeconds ? `${d.summary.videos.toLocaleString()} videos` : 'videos (watch time not recorded)'}</p>
 
           <dl className="mt-10 grid grid-cols-2 gap-8">

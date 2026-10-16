@@ -63,7 +63,7 @@ export function Overview({ welcome }: { welcome?: boolean }) {
       <>
         <PageTitle title="Your YouTube" sub={welcome ? 'TubeStat is installed and recording.' : undefined} />
         <div className="max-w-xl">
-          <p className="display text-[34px] leading-tight">Watch something on YouTube. It’ll be here a few seconds later.</p>
+          <p className="statement text-[28px]">Watch something on YouTube. It’ll be here a few seconds later.</p>
           <p className="mt-5 text-[15px] leading-relaxed text-dim">
             TubeStat records what you watch, for how long, and who made it, on this device only. The longer it runs, the more there is to see: your top creators, how your taste changes, and how early you found the channels you love.
           </p>
@@ -104,7 +104,7 @@ export function Overview({ welcome }: { welcome?: boolean }) {
       {/* Headline numbers */}
       <div className="enter grid grid-cols-2 gap-x-8 gap-y-8 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
         <div className="col-span-2 md:col-span-1">
-          <Duration seconds={s.watchSeconds} className="hero-num block text-[76px] md:text-[96px]" />
+          <Duration seconds={s.watchSeconds} className="hero-num block text-[61px] md:text-[77px]" />
           <p className="mt-3 text-[14px] text-dim">watched</p>
         </div>
         <Figure value={s.videos.toLocaleString()} label="videos" />
@@ -123,7 +123,7 @@ export function Overview({ welcome }: { welcome?: boolean }) {
             <a href={href('creators', top.channelId)} className="group flex items-center gap-5">
               <Avatar src={top.avatar} name={top.channelName} size={88} />
               <div className="min-w-0">
-                <p className="display truncate text-[40px] leading-[1.05] group-hover:underline group-hover:decoration-1 group-hover:underline-offset-8">{top.channelName}</p>
+                <p className="display truncate text-[28px] leading-[1.05] group-hover:underline group-hover:decoration-1 group-hover:underline-offset-8">{top.channelName}</p>
                 <p className="tnum mt-2 text-[14px] text-dim">
                   {formatDuration(top.watchSeconds)} watched, {top.videos} {top.videos === 1 ? 'video' : 'videos'}
                 </p>
@@ -155,7 +155,7 @@ export function Overview({ welcome }: { welcome?: boolean }) {
         <Section title="Your longest session">
           {longest ? (
             <>
-              <Duration seconds={longest.watchSeconds} className="hero-num block text-[56px]" />
+              <Duration seconds={longest.watchSeconds} className="hero-num block text-[45px]" />
               <p className="mt-3 text-[14px] text-dim">
                 {formatDate(longest.start, 'weekday')}, {longest.videos} videos
               </p>
@@ -167,7 +167,7 @@ export function Overview({ welcome }: { welcome?: boolean }) {
 
         <Section title="Worth knowing" aside={insights.length > 1 ? <a href={href('insights')} className="hover:text-paper">{insights.length} insights</a> : undefined}>
           {insights[0] ? (
-            <blockquote className="display text-[30px] leading-[1.15]">{insights[0].text}</blockquote>
+            <blockquote className="statement text-[24px]">{insights[0].text}</blockquote>
           ) : (
             <p className="text-[14px] leading-relaxed text-dim">Insights show up once there’s enough history to say something true. Usually a week or two of normal watching.</p>
           )}
@@ -201,7 +201,7 @@ export function Overview({ welcome }: { welcome?: boolean }) {
 function Figure({ value, label }: { value: React.ReactNode; label: string }) {
   return (
     <div className="self-end">
-      <p className="hero-num text-[40px] md:text-[48px]">{value}</p>
+      <p className="hero-num text-[32px] md:text-[38px]">{value}</p>
       <p className="mt-3 text-[14px] text-dim">{label}</p>
     </div>
   );

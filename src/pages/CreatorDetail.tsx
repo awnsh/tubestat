@@ -67,7 +67,7 @@ export function CreatorDetail({ channelId }: { channelId: string }) {
       <header className="enter mt-6 flex flex-wrap items-center gap-7">
         <Avatar src={ch?.avatar} name={name} size={128} />
         <div className="min-w-0">
-          <h1 className="display text-[52px] leading-none md:text-[76px]">{name}</h1>
+          <h1 className="display text-[36px] leading-none md:text-[53px]">{name}</h1>
           <div className="mt-4 flex flex-wrap items-center gap-3 text-[14px] text-dim">
             {og ? <OgBadge tier={og.tier} size="lg" /> : null}
             {ch?.handle ? <span>{ch.handle}</span> : null}
@@ -132,7 +132,7 @@ export function CreatorDetail({ channelId }: { channelId: string }) {
       <Section title="How early you were" className="mt-14" aside={og ? <Button onClick={() => setSharing(true)}>Share</Button> : undefined}>
         {og ? (
           <div className="max-w-2xl">
-            <p className="display text-[34px] leading-tight">
+            <p className="statement text-[28px]">
               {og.basis === 'audience'
                 ? `You subscribed before ${og.estimate ? 'about ' : ''}${formatAudienceShare(og.audienceAfterYou ?? 0)} of their current audience.`
                 : `You subscribed ${Math.round((og.lifetimeShare ?? 0) * 100)}% of the way into the channel’s life so far.`}
@@ -205,7 +205,7 @@ function Fact({ label, children, big }: { label: string; children: React.ReactNo
   return (
     <div>
       <dt className="text-[13px] text-dim">{label}</dt>
-      <dd className={big ? 'hero-num mt-3 text-[48px]' : 'tnum mt-2 text-[22px] font-medium tracking-tight'}>{children}</dd>
+      <dd className={big ? 'hero-num mt-3 text-[38px]' : 'tnum mt-2 text-[22px] font-medium tracking-tight'}>{children}</dd>
     </div>
   );
 }

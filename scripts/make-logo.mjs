@@ -1,5 +1,5 @@
 // Builds the TubeStat logo files: SVG mark, SVG lockups (wordmark outlined from
-// Instrument Serif so it renders identically everywhere), and PNG icons.
+// Unbounded SemiBold so it renders identically everywhere), and PNG icons.
 //   node scripts/make-logo.mjs
 //
 // The mark: YouTube's played-progress bar forms the crossbar of a T, with the
@@ -33,25 +33,26 @@ const markDark = tight(glyph());
 const markLight = tight(glyph(C.ink, C.trackLight));
 
 // Wordmark lockups.
-const fontFile = readFileSync(resolve(root, 'node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff'));
+const fontFile = readFileSync(resolve(root, 'node_modules/@fontsource/unbounded/files/unbounded-latin-600-normal.woff'));
 const font = opentype.parse(fontFile.buffer.slice(fontFile.byteOffset, fontFile.byteOffset + fontFile.byteLength));
-// Size the word so its cap height spans the mark from the bar's top (y 25) to the stem's foot (y 80).
+// Unbounded is heavy and wide, so its caps sit a little shorter than the mark (cap 44 of the glyph's 55) to balance it.
 const capHeight = font.tables.os2?.sCapHeight || font.unitsPerEm * 0.7;
-const size = Math.round((55 * font.unitsPerEm) / capHeight); // whole sizes avoid NaN points in opentype.js
-// Lay glyphs out by hand (with kerning): opentype.js can't run this font's ccmp lookups.
+const size = Math.round((44 * font.unitsPerEm) / capHeight); // whole sizes avoid NaN points in opentype.js
+// Lay glyphs out by hand (kerning plus slight tightening): opentype.js can't run every font's GSUB lookups.
+const tracking = -0.02 * size;
 function textPath(str, x, y) {
   const scale = size / font.unitsPerEm;
   const path = new opentype.Path();
   const glyphs = [...str].map((ch) => font.charToGlyph(ch));
   glyphs.forEach((g, i) => {
     path.extend(g.getPath(x, y, size));
-    x += g.advanceWidth * scale + (glyphs[i + 1] ? font.getKerningValue(g, glyphs[i + 1]) * scale : 0);
+    x += g.advanceWidth * scale + (glyphs[i + 1] ? font.getKerningValue(g, glyphs[i + 1]) * scale + tracking : 0);
   });
   return path;
 }
 const bb = textPath('TubeStat', 0, 0).getBoundingBox();
 const textW = bb.x2 - bb.x1;
-const gap = 14;
+const gap = 16;
 // Baseline sits on the stem's foot.
 const baseline = 80;
 const lockup = (stem, track, ink) => {

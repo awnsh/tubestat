@@ -139,7 +139,7 @@ function Board({ group, metric }: { group: FriendGroup; metric: BoardMetric }) {
           <span className="tnum text-[13px] text-faint">{r.stale ? '' : i + 1}</span>
           <Avatar src={null} name={r.member.name} size={36} />
           <div className="min-w-0">
-            <p className={cx('truncate', i === 0 && !r.stale ? 'display text-[28px] leading-none' : 'text-[15px]')}>
+            <p className={cx('truncate', i === 0 && !r.stale ? 'display text-[20px] leading-none' : 'text-[15px]')}>
               {r.member.name}
               {r.member.isYou ? <span className="ml-2 font-sans text-[12px] text-dim">you</span> : null}
             </p>

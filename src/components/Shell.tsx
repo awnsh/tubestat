@@ -20,8 +20,8 @@ export function Shell({ active, children }: { active: string; children: ReactNod
     <div className="min-h-screen md:flex">
       <aside className="z-20 border-b border-line bg-ink md:sticky md:top-0 md:h-screen md:w-56 md:shrink-0 md:border-b-0 md:border-r">
         <div className="flex h-full flex-col px-4 py-4 md:px-6 md:py-8">
-          <a href={href('overview')} className="display mb-0 inline-flex items-center gap-2.5 text-[26px] leading-none md:mb-10">
-            <Mark size={26} />
+          <a href={href('overview')} className="display mb-0 inline-flex items-center gap-2.5 text-[20px] leading-none md:mb-10">
+            <Mark size={22} />
             TubeStat
           </a>
           <nav aria-label="Main" className="scrollbar-none -mx-4 mt-3 flex gap-1 overflow-x-auto px-4 md:mx-0 md:mt-0 md:flex-col md:px-0">
@@ -70,7 +70,7 @@ export function PageTitle({ title, sub, aside }: { title: ReactNode; sub?: React
   return (
     <header className="mb-10 flex flex-wrap items-end justify-between gap-6">
       <div className="min-w-0">
-        <h1 className="display text-[44px] md:text-[64px]">{title}</h1>
+        <h1 className="display text-[31px] md:text-[45px]">{title}</h1>
         {sub ? <p className="mt-3 text-[15px] text-dim">{sub}</p> : null}
       </div>
       {aside}

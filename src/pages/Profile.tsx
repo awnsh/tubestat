@@ -113,7 +113,7 @@ export function Profile() {
 function Big({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dd className="hero-num text-[40px]">{value}</dd>
+      <dd className="hero-num text-[32px]">{value}</dd>
       <dt className="mt-2 text-[13px] text-dim">{label}</dt>
     </div>
   );
