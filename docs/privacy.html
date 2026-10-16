@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TubeStat privacy policy</title>
+  <meta name="description" content="What TubeStat records, where it's stored, and what never leaves your device." />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --ink: #111113; --raise: #18181b; --line: rgb(242 240 235 / 0.08); --paper: #f2f0eb; --dim: #a19f9a; --play: #ff3040; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--ink); color: var(--paper); font: 400 17px/1.7 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px 96px; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 22px 0 56px; }
+    .mark { display: inline-flex; gap: 10px; align-items: center; font: 28px/1 'Instrument Serif', Georgia, serif; color: inherit; text-decoration: none; }
+    .mark img { width: 30px; height: auto; margin-top: 2px; }
+    header a.back { color: var(--dim); font-size: 15px; }
+    h1 { font: 400 clamp(44px, 8vw, 72px)/1 'Instrument Serif', Georgia, serif; margin: 0; }
+    .meta { color: var(--dim); font-size: 14px; margin: 16px 0 48px; }
+    h2 { font: 400 30px/1.15 'Instrument Serif', Georgia, serif; margin: 48px 0 12px; }
+    p, li { color: var(--dim); }
+    strong { color: var(--paper); font-weight: 500; }
+    ul { padding-left: 20px; }
+    li { margin: 6px 0; }
+    a { color: var(--paper); }
+    .summary { border-left: 2px solid var(--play); padding: 4px 0 4px 20px; margin: 0; }
+    .summary p { color: var(--paper); margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="mark" href="./"><img src="assets/mark.svg" alt="" />TubeStat</a>
+      <a class="back" href="./">Back to TubeStat</a>
+    </header>
+    <h1>Privacy policy</h1>
+    <p class="meta">Last updated October 15, 2026. Applies to the TubeStat browser extension and this website.</p>
+
+    <div class="summary">
+      <p>TubeStat keeps a record of your YouTube viewing on your own device. It has no server and no account. Your viewing history is never sent to the developer or anyone else, never sold, and never used for advertising.</p>
+    </div>
+
+    <h2>What TubeStat records</h2>
+    <p>Only while you use youtube.com in a browser where TubeStat is installed:</p>
+    <ul>
+      <li><strong>Videos you play:</strong> the video’s ID, title, channel name and channel ID, length, YouTube’s category for it, whether it’s a Short or a live stream, when you watched, how long it actually played, and how much of it you covered.</li>
+      <li><strong>Channels you visit:</strong> name, handle, profile picture address, and public subscriber count, recorded at most once a day.</li>
+      <li><strong>Your subscriptions:</strong> which channels you’re subscribed to, read from YouTube pages you open, and the date you subscribed when YouTube makes it available.</li>
+      <li><strong>Your settings,</strong> and any friend groups and stat codes you add.</li>
+    </ul>
+    <p>TubeStat does not record your searches, comments, likes, recommendations, messages, account details, or anything you do on any other website.</p>
+
+    <h2>Where it’s stored</h2>
+    <p>Everything is kept in your browser’s extension storage on this device. It isn’t synced to other devices or to any cloud service. Uninstalling TubeStat deletes it.</p>
+
+    <h2>What leaves your device</h2>
+    <p>Your viewing data never does. TubeStat makes only these network requests:</p>
+    <ul>
+      <li><strong>Images from YouTube’s servers</strong> (video thumbnails and channel pictures), to display them in your dashboard and draw share cards.</li>
+      <li><strong>The YouTube Data API, only if you choose to connect your account.</strong> This is off by default. If you turn it on, TubeStat asks Google for read-only access to your subscriptions, reads your subscription list and those channels’ public statistics, and stores the results on your device. The access token is kept in memory only for that sync and is never saved. TubeStat’s use of information received from Google APIs follows the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</li>
+    </ul>
+
+    <h2>What friends see</h2>
+    <p>Nothing, unless you share something yourself. A <strong>stat code</strong> contains your chosen name and this week’s totals (watch time, number of videos, number of creators, and streaks). It never contains video titles, channels, or history. <strong>Share cards</strong> are images created on your device that you download or copy yourself.</p>
+
+    <h2>Your choices</h2>
+    <ul>
+      <li>Pause recording at any time in Profile → Tracking.</li>
+      <li>Export everything TubeStat has recorded as a JSON file from Profile → Your data.</li>
+      <li>Delete everything from Profile → Your data → Delete everything, or by removing the extension.</li>
+    </ul>
+
+    <h2>Website</h2>
+    <p>This website is hosted on GitHub Pages and loads fonts from Google Fonts. It has no analytics, cookies, or tracking of its own. GitHub and Google may log requests as described in their own privacy policies.</p>
+
+    <h2>Children</h2>
+    <p>TubeStat isn’t directed at children under 13 and doesn’t knowingly collect information about anyone. All data stays on the device where it was recorded.</p>
+
+    <h2>Changes and contact</h2>
+    <p>If this policy changes, the new version will be posted here with a new date. Questions or concerns: open an issue on the <a href="https://github.com/awnsh/tubestat/issues">TubeStat GitHub repository</a>.</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "TubeStat: Watch Time Tracker for YouTube",
+  "short_name": "TubeStat",
+  "homepage_url": "https://awnsh.github.io/tubestat/",
+  "version": "1.0.0",
+  "description": "A private record of how you watch YouTube: watch time, top creators, history, and how early you found them. Stays on your device.",
+  "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
+  "action": { "default_popup": "popup.html", "default_title": "TubeStat", "default_icon": { "16": "icons/16.png", "32": "icons/32.png" } },
+  "background": { "service_worker": "background.js" },
+  "permissions": ["storage", "unlimitedStorage"],
+  "optional_permissions": ["identity"],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://i.ytimg.com/*",
+    "https://yt3.ggpht.com/*",
+    "https://yt3.googleusercontent.com/*"
+  ],
+  "optional_host_permissions": ["https://www.googleapis.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content-bridge.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    },
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content-tracker.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

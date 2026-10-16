@@ -1,0 +1,104 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource/instrument-serif/400.css';
+@import '@fontsource/instrument-serif/400-italic.css';
+@import 'tailwindcss';
+
+/*
+ * TubeStat tokens.
+ * One accent — the red of YouTube's played-progress bar — used only for
+ * "played" marks (the scrubber motif) and the OG badge. The warm grey
+ * "buffer" tone is its partner for comparison marks.
+ */
+@theme {
+  --color-ink: #111113;
+  --color-raise: #18181b;
+  --color-raise-2: #1f1f23;
+  --color-line: rgb(242 240 235 / 0.08);
+  --color-line-strong: rgb(242 240 235 / 0.16);
+  --color-paper: #f2f0eb;
+  --color-dim: #9b9994;
+  --color-faint: #64625e;
+  --color-play: #ff3040;
+  --color-buffer: rgb(242 240 235 / 0.26);
+  --color-track: rgb(242 240 235 / 0.1);
+
+  --font-sans: 'Inter Variable', Inter, system-ui, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+}
+
+@layer base {
+  html,
+  body {
+    background: var(--color-ink);
+    color: var(--color-paper);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  ::selection {
+    background: rgb(255 48 64 / 0.35);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-paper);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  button {
+    cursor: pointer;
+  }
+}
+
+@layer utilities {
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+  .display {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .hero-num {
+    font-weight: 600;
+    letter-spacing: -0.045em;
+    line-height: 0.9;
+    font-variant-numeric: tabular-nums;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.enter {
+  animation: fade-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.grow-x {
+  transform-origin: left;
+  animation: grow-x 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter,
+  .grow-x {
+    animation: none;
+  }
+}

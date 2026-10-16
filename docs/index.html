@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TubeStat: your YouTube, tracked</title>
+  <meta name="description" content="A free Chrome extension that keeps a private record of how you watch YouTube: watch time, top creators, how early you found them, and your own Wrapped." />
+  <meta property="og:title" content="TubeStat: your YouTube, tracked" />
+  <meta property="og:description" content="Your personal YouTube Wrapped, except it’s always running. Private, on-device, free." />
+  <meta property="og:image" content="assets/overview.png" />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="alternate icon" href="assets/icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #111113;
+      --raise: #18181b;
+      --line: rgb(242 240 235 / 0.08);
+      --line-strong: rgb(242 240 235 / 0.16);
+      --paper: #f2f0eb;
+      --dim: #9b9994;
+      --faint: #64625e;
+      --play: #ff3040;
+      --track: rgb(242 240 235 / 0.12);
+      --serif: 'Instrument Serif', Georgia, serif;
+      --sans: 'Inter', system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--ink);
+      color: var(--paper);
+      font: 400 17px/1.6 var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    img { display: block; max-width: 100%; height: auto; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    :focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; border-radius: 4px; }
+
+    /* Top bar */
+    .bar { display: flex; justify-content: space-between; align-items: center; padding: 22px 0; }
+    .mark { font: 28px/1 var(--serif); text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
+    .mark img { width: 30px; height: auto; margin-top: 2px; }
+    .bar nav { display: flex; gap: 24px; font-size: 15px; }
+    .bar nav a { color: var(--dim); text-decoration: none; }
+    .bar nav a:hover { color: var(--paper); }
+
+    /* Hero */
+    .hero { padding: 72px 0 40px; }
+    .hero h1 { font: 400 clamp(56px, 10vw, 128px)/0.95 var(--serif); letter-spacing: -0.015em; margin: 0; max-width: 11ch; }
+    .hero p.lede { font-size: clamp(18px, 2.2vw, 22px); color: var(--dim); max-width: 34em; margin: 28px 0 0; }
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 10px; font-weight: 500; font-size: 15px; text-decoration: none; }
+    .btn.primary { background: var(--paper); color: var(--ink); }
+    .btn.primary:hover { background: #fff; }
+    .btn.quiet { border: 1px solid var(--line-strong); }
+    .btn.quiet:hover { background: var(--raise); }
+    .note { margin-top: 14px; font-size: 13px; color: var(--faint); }
+
+    /* The scrubber motif: one red "played" line with a playhead */
+    .scrub { position: relative; height: 3px; background: var(--track); border-radius: 3px; margin: 64px 0 0; }
+    .scrub span { position: absolute; inset: 0 auto 0 0; width: var(--p, 62%); background: var(--play); border-radius: 3px; }
+    .scrub span::after { content: ''; position: absolute; right: -6px; top: 50%; width: 13px; height: 13px; border-radius: 50%; background: var(--play); transform: translateY(-50%); }
+    @media (prefers-reduced-motion: no-preference) {
+      .scrub.anim span { animation: play 2.4s cubic-bezier(.2,.7,.2,1) both .3s; }
+      @keyframes play { from { width: 0; } }
+    }
+
+    .shot { border: 1px solid var(--line-strong); border-radius: 14px; overflow: hidden; background: var(--raise); }
+    .hero .shot { margin-top: 56px; box-shadow: 0 40px 120px -40px rgb(0 0 0 / .9); }
+
+    /* Feature rows */
+    section { padding: 112px 0 0; }
+    .eyebrow { color: var(--dim); font-size: 15px; margin: 0 0 14px; }
+    h2 { font: 400 clamp(40px, 6vw, 72px)/1 var(--serif); letter-spacing: -0.01em; margin: 0; max-width: 14ch; }
+    .row { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; align-items: center; }
+    .row.flip { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+    .row.flip .copy { order: 2; }
+    .copy p { color: var(--dim); margin: 22px 0 0; max-width: 30em; }
+    .copy ul { padding: 0; margin: 24px 0 0; list-style: none; }
+    .copy li { padding: 12px 0; border-top: 1px solid var(--line); color: var(--paper); font-size: 15px; }
+    .copy li span { color: var(--dim); }
+    .badge { display: inline-block; background: var(--play); color: #fff; font: 700 11px/1 var(--sans); letter-spacing: .06em; padding: 4px 7px; border-radius: 4px; vertical-align: 2px; margin-right: 6px; }
+    .pair { display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px; align-items: start; }
+
+    /* Honesty table */
+    table { width: 100%; border-collapse: collapse; margin-top: 40px; font-size: 15px; }
+    th, td { text-align: left; padding: 14px 16px 14px 0; border-top: 1px solid var(--line); vertical-align: top; }
+    th { font-weight: 500; }
+    td { color: var(--dim); }
+    td.tag { white-space: nowrap; color: var(--paper); }
+    .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
+    .dot.v { background: var(--paper); }
+    .dot.t { background: var(--play); }
+    .dot.e { border: 1.5px solid var(--dim); }
+    .dot.n { background: var(--faint); }
+
+    /* Privacy */
+    .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; margin-top: 48px; }
+    .grid3 h3 { font: 400 28px/1.1 var(--serif); margin: 0 0 10px; }
+    .grid3 p { color: var(--dim); margin: 0; font-size: 15px; }
+
+    /* Install steps (a real sequence) */
+    ol.steps { list-style: none; padding: 0; margin: 48px 0 0; counter-reset: s; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; }
+    ol.steps li { counter-increment: s; border-top: 1px solid var(--line-strong); padding-top: 18px; color: var(--dim); font-size: 15px; }
+    ol.steps li::before { content: counter(s); display: block; font: 400 44px/1 var(--serif); color: var(--paper); margin-bottom: 14px; }
+    ol.steps strong { color: var(--paper); font-weight: 500; }
+    code { font: 13px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--raise); border: 1px solid var(--line); padding: 1px 6px; border-radius: 5px; color: var(--paper); }
+
+    footer { margin-top: 140px; padding: 32px 0 48px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 14px; color: var(--faint); }
+    footer a { color: var(--dim); }
+
+    @media (max-width: 860px) {
+      .row, .row.flip { grid-template-columns: 1fr; gap: 32px; }
+      .row.flip .copy { order: 0; }
+      .grid3 { grid-template-columns: 1fr; gap: 28px; }
+      ol.steps { grid-template-columns: 1fr 1fr; }
+      .pair { grid-template-columns: 1fr; }
+      section { padding-top: 88px; }
+      .bar nav a.hide-sm { display: none; }
+      table, thead, tbody, tr, th, td { display: block; }
+      thead { display: none; }
+      tr { border-top: 1px solid var(--line); padding: 12px 0; }
+      th, td { border: 0; padding: 2px 0; }
+    }
+    @media (max-width: 480px) { ol.steps { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="bar">
+      <a class="mark" href="#top"><img src="assets/mark.svg" alt="" />TubeStat</a>
+      <nav aria-label="Page">
+        <a class="hide-sm" href="#creators">Features</a>
+        <a class="hide-sm" href="#privacy">Privacy</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/awnsh/tubestat">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <div class="hero">
+        <h1>Your YouTube life, tracked.</h1>
+        <p class="lede">TubeStat is a Chrome extension that quietly records how you watch YouTube and turns it into a profile of your viewing life: hours, creators, categories, how early you found them, and a Wrapped that’s always up to date. Everything stays on your device.</p>
+        <div class="cta">
+          <a class="btn primary" href="https://github.com/awnsh/tubestat/releases/latest/download/tubestat-extension.zip">Download for Chrome</a>
+          <a class="btn quiet" href="https://github.com/awnsh/tubestat">View the source</a>
+        </div>
+        <p class="note">Free and open source. Works in Chrome, Edge, Brave and Arc. Screens below use sample data.</p>
+        <div class="scrub anim" aria-hidden="true"><span></span></div>
+        <div class="shot"><img src="assets/overview.png" alt="TubeStat overview: 29 hours watched this month across 117 videos and 20 creators, a daily bar chart, the top creator and top categories" width="2880" height="1800" /></div>
+      </div>
+
+      <section id="creators">
+        <div class="row">
+          <div class="copy">
+            <p class="eyebrow">Creators</p>
+            <h2>I was here before they blew up.</h2>
+            <p>Every creator gets a page about <em>you and them</em>: when you subscribed, how long you’ve been watching, how many hours you’ve spent, and how much they’ve grown since.</p>
+            <ul>
+              <li><span class="badge">DAY ONE</span><span class="badge">OG</span> <span>Earned from measured subscriber counts, not vibes.</span></li>
+              <li>“You subscribed before 97% of their current audience.” <span>Shown only when the numbers support it.</span></li>
+            </ul>
+          </div>
+          <div class="shot"><img src="assets/creator.png" alt="A creator page showing DAY ONE status, subscribed February 2020, 87 hours watched, and growth from 12.4K to 3.4M subscribers" loading="lazy" width="2880" height="1800" /></div>
+        </div>
+      </section>
+
+      <section>
+        <div class="row flip">
+          <div class="shot"><img src="assets/history.png" alt="History timeline listing each month with its watch time" loading="lazy" width="2880" height="1800" /></div>
+          <div class="copy">
+            <p class="eyebrow">History and Time Machine</p>
+            <h2>It gets better the longer you keep it.</h2>
+            <p>Every month becomes a page: top creators, categories, your longest session, the video you couldn’t stop watching, the channels you discovered. Jump back to any month with the Time Machine.</p>
+            <p>Bring your past with you by importing your Google Takeout history on day one.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="row">
+          <div class="copy">
+            <p class="eyebrow">Insights</p>
+            <h2>Things you didn’t know about yourself.</h2>
+            <p>Plain sentences written from what you actually watched: when you watch most, how your taste shifted from gaming to programming, which three creators take half your time. No guesses about why.</p>
+          </div>
+          <div class="shot"><img src="assets/insights.png" alt="Insights page with sentences about viewing habits and a comparison of category shares between two years" loading="lazy" width="2880" height="1800" /></div>
+        </div>
+      </section>
+
+      <section>
+        <div class="row flip">
+          <div class="pair">
+            <div class="shot"><img src="assets/wrapped.png" alt="Wrapped slide showing your top five creators for August" loading="lazy" width="2880" height="1800" /></div>
+            <div class="shot"><img src="assets/share-card.png" alt="A share card: My YouTube, August 2026, 60 hours 22 minutes across 252 videos" loading="lazy" width="1080" height="1350" /></div>
+          </div>
+          <div class="copy">
+            <p class="eyebrow">Wrapped and sharing</p>
+            <h2>Your Wrapped, any month you like.</h2>
+            <p>Play back any month or year as a story, then turn it into a card sized for your feed. Friends can compare weekly totals on a leaderboard by swapping a short code. Only the totals, never what you watched.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="honest">
+        <p class="eyebrow">Honest numbers</p>
+        <h2>Nothing made up.</h2>
+        <p style="color:var(--dim);max-width:40em;margin:22px 0 0">YouTube doesn’t expose everything, so TubeStat tells you where each number came from and never fills the gaps with guesses.</p>
+        <table>
+          <thead><tr><th>What</th><th>Status</th><th>How</th></tr></thead>
+          <tbody>
+            <tr><th>Watch time, completion, Shorts</th><td class="tag"><span class="dot t"></span>Tracked since install</td><td>Real playing time. Pauses and ads don’t count, and skipping to the end doesn’t count as finishing.</td></tr>
+            <tr><th>Video, channel, YouTube’s category</th><td class="tag"><span class="dot v"></span>Verified</td><td>Read from YouTube’s own player as you watch.</td></tr>
+            <tr><th>Subscriber growth</th><td class="tag"><span class="dot t"></span>Tracked since first visit</td><td>Snapshotted daily. YouTube doesn’t publish past counts, so history starts when TubeStat first sees a creator.</td></tr>
+            <tr><th>When you subscribed</th><td class="tag"><span class="dot v"></span>Verified, when available</td><td>Captured the moment you click Subscribe, or read from your YouTube account if you connect it.</td></tr>
+            <tr><th>OG status from dates alone</th><td class="tag"><span class="dot e"></span>Estimate</td><td>Labelled as an estimate, and never turned into a claim about audience size.</td></tr>
+            <tr><th>Viewing before install</th><td class="tag"><span class="dot n"></span>Imported</td><td>From Google Takeout: videos and dates are real, watch time isn’t known.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="privacy">
+        <div class="row">
+          <div class="copy">
+            <p class="eyebrow">Privacy</p>
+            <h2>Your history stays yours.</h2>
+          </div>
+          <div class="shot" style="max-width:340px;justify-self:end"><img src="assets/popup.png" alt="The toolbar popup: this week’s watch time, top creator and top category" loading="lazy" width="340" height="470" /></div>
+        </div>
+        <div class="grid3">
+          <div><h3>On your device</h3><p>Everything is stored in Chrome’s extension storage on this computer. There’s no TubeStat server and no account.</p></div>
+          <div><h3>Nothing uploaded</h3><p>Viewing data never leaves your device. The only network requests load YouTube thumbnails, and your subscriptions if you choose to connect.</p></div>
+          <div><h3>Yours to delete</h3><p>Export everything as JSON or erase it all in one click. Removing the extension deletes it too.</p></div>
+        </div>
+      </section>
+
+      <section id="install">
+        <p class="eyebrow">Install</p>
+        <h2>Two minutes, once.</h2>
+        <ol class="steps">
+          <li><strong>Download</strong> <a href="https://github.com/awnsh/tubestat/releases/latest/download/tubestat-extension.zip">tubestat-extension.zip</a> and unzip it.</li>
+          <li><strong>Open</strong> <code>chrome://extensions</code> and turn on <strong>Developer mode</strong>, top right.</li>
+          <li><strong>Click Load unpacked</strong> and choose the unzipped folder.</li>
+          <li><strong>Watch YouTube.</strong> Your first video appears in the dashboard within seconds.</li>
+        </ol>
+        <p class="note" style="margin-top:28px">Prefer to build it yourself? <code>npm install &amp;&amp; npm run build</code>, then load the <code>dist</code> folder. Instructions are in the <a href="https://github.com/awnsh/tubestat#readme">README</a>.</p>
+        <div class="scrub" style="--p:100%" aria-hidden="true"><span></span></div>
+      </section>
+    </main>
+
+    <footer>
+      <span>TubeStat isn’t affiliated with YouTube or Google.</span>
+      <span><a href="privacy.html">Privacy policy</a> &nbsp; <a href="https://github.com/awnsh/tubestat">Source on GitHub</a></span>
+    </footer>
+  </div>
+</body>
+</html>
