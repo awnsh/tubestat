@@ -10,6 +10,7 @@ import {
   type Subscription,
   type Watch,
 } from './schema';
+import { HEAT_PREFIX, type ReplayHeat } from '../replay/heat';
 
 /**
  * Storage layout (chrome.storage.local, unlimitedStorage):
@@ -21,6 +22,7 @@ import {
  *   memberId        string
  *   w:YYYY-MM       Record<watchId, Watch>   — watches sharded by month so
  *                                              writes stay small as history grows
+ *   h:<videoId>     ReplayHeat               — one Replay Map per video
  */
 
 export const WATCH_SHARD_PREFIX = 'w:';
@@ -48,10 +50,11 @@ export function randomId(): string {
 export async function loadDatabase(): Promise<Database> {
   const all = await kvGetAll();
   const watches: Watch[] = [];
+  const replays: Record<string, ReplayHeat> = {};
   for (const [key, value] of Object.entries(all)) {
-    if (key.startsWith(WATCH_SHARD_PREFIX) && value && typeof value === 'object') {
-      watches.push(...Object.values(value as Record<string, Watch>));
-    }
+    if (!value || typeof value !== 'object') continue;
+    if (key.startsWith(WATCH_SHARD_PREFIX)) watches.push(...Object.values(value as Record<string, Watch>));
+    else if (key.startsWith(HEAT_PREFIX)) replays[key.slice(HEAT_PREFIX.length)] = value as ReplayHeat;
   }
   watches.sort((a, b) => a.timestamp - b.timestamp);
   return {
@@ -62,6 +65,7 @@ export async function loadDatabase(): Promise<Database> {
     subscriptions: (all.subscriptions as Record<string, Subscription>) ?? {},
     groups: (all.groups as FriendGroup[]) ?? [],
     memberId: (all.memberId as string) ?? '',
+    replays,
   };
 }
 

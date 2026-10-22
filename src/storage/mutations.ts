@@ -5,6 +5,7 @@
  */
 import { kvClear, kvGet, kvGetMany, kvSet } from './kv';
 import { newMeta, shardKey } from './db';
+import { applyDelta, heatKey, type HeatDelta, type ReplayHeat } from '../replay/heat';
 import type { ApiSyncPayload, Channel, DataSource, Meta, Subscription, TrackerMessage, Watch } from './schema';
 
 let queue: Promise<unknown> = Promise.resolve();
@@ -115,6 +116,13 @@ export function upsertWatch(watch: Watch) {
     if (!meta.activeDays.includes(today)) meta.activeDays.push(today);
 
     await kvSet({ [key]: month, channels, meta });
+  });
+}
+
+export function addHeat(delta: HeatDelta) {
+  return locked(async () => {
+    const key = heatKey(delta.videoId);
+    await kvSet({ [key]: applyDelta(await kvGet<ReplayHeat>(key), delta) });
   });
 }
 
@@ -264,6 +272,8 @@ export async function handleMessage(msg: TrackerMessage): Promise<unknown> {
   switch (msg.type) {
     case 'watch:upsert':
       return upsertWatch(msg.watch);
+    case 'heat:add':
+      return addHeat(msg.delta);
     case 'channel:seen':
       return channelSeen(msg);
     case 'subscriptions:sync':

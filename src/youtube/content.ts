@@ -7,6 +7,7 @@
 import { BRIDGE_SOURCE, type BridgeMessage, type PlayerSample } from './bridge-protocol';
 import { parseCount, upscaleAvatar } from './parse';
 import { WatchTracker } from '../tracking/tracker';
+import { ReplayMap } from '../replay/player';
 import { DEFAULT_SETTINGS, type Settings, type TrackerMessage, type Watch } from '../storage/schema';
 
 let settings: Settings = DEFAULT_SETTINGS;
@@ -19,8 +20,11 @@ const tracker = new WatchTracker({
   trackShorts: DEFAULT_SETTINGS.trackShorts,
 });
 
+const replay = new ReplayMap((delta) => send({ type: 'heat:add', delta }));
+
 function applySettings(next: Partial<Settings> | undefined) {
   settings = { ...DEFAULT_SETTINGS, ...(next ?? {}) };
+  replay.setEnabled(settings.replayMap);
   tracker.setOptions({
     minWatchSeconds: settings.minWatchSeconds,
     resumeGapMs: settings.sessionGapMinutes * 60_000,
@@ -95,11 +99,18 @@ window.addEventListener('message', (event) => {
 
   const sample = msg.sample;
   lastSample = sample;
+  const now = Date.now();
   if (!settings.trackingEnabled) {
-    persist(tracker.tick(null, Date.now()));
+    persist(tracker.tick(null, now));
+    replay.tick(null, now);
     return;
   }
-  persist(tracker.tick(sample, Date.now()));
+  persist(tracker.tick(sample, now));
+  try {
+    replay.tick(sample, now);
+  } catch {
+    /* the map is a nicety; never let it break tracking */
+  }
 
   // Check the owner block for a while after each new video, then every 10s so
   // a Subscribe click is caught the moment it happens.
@@ -128,7 +139,10 @@ document.addEventListener(
   true,
 );
 
-const flush = () => persist(tracker.flush());
+const flush = () => {
+  persist(tracker.flush());
+  replay.flush();
+};
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flush();
 });

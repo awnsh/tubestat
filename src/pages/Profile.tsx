@@ -55,6 +55,7 @@ export function Profile() {
         <div className="max-w-2xl divide-y divide-line">
           <Toggle label="Record my YouTube viewing" detail="When off, nothing new is recorded. Everything already recorded stays." on={db.settings.trackingEnabled} disabled={sample} onChange={(v) => update({ trackingEnabled: v })} />
           <Toggle label="Include Shorts" detail="Shorts are recorded separately from long-form videos, so you can always tell them apart." on={db.settings.trackShorts} disabled={sample} onChange={(v) => update({ trackShorts: v })} />
+          <Toggle label="Replay Map on YouTube" detail="Shows which parts of a video you’ve already seen or replayed, right on the seek bar, with a chip to resume or jump to what you haven’t seen." on={db.settings.replayMap} disabled={sample} onChange={(v) => update({ replayMap: v })} />
         </div>
       </Section>
 

@@ -5,6 +5,7 @@
  * Creators are fictional.
  */
 import { isoWeek } from '../analytics/periods';
+import { BUCKETS, type ReplayHeat } from '../replay/heat';
 import { DEFAULT_SETTINGS, type Channel, type Database, type Subscription, type Watch } from '../storage/schema';
 
 function rng(seed: number) {
@@ -178,6 +179,21 @@ export function makeSampleDatabase(now = Date.now()): Database {
     }
   }
 
+  // Replay Maps for a handful of long videos: one pass over what was watched, plus a few replayed stretches.
+  const replays: Record<string, ReplayHeat> = {};
+  for (const w of watches.filter((x) => !x.isShort && x.duration > 600).slice(-40).filter((_, i) => i % 5 === 0)) {
+    const width = w.duration / BUCKETS;
+    const seen = Math.round(BUCKETS * Math.max(0.35, (w.percentageWatched ?? 50) / 100));
+    const b = Array.from({ length: BUCKETS }, (_, i) => (i < seen ? width * (0.9 + r() * 0.2) : 0));
+    for (let k = 0; k < 1 + Math.floor(r() * 3); k++) {
+      const at = Math.floor(r() * seen);
+      const len = 2 + Math.floor(r() * 6);
+      const extra = 1 + Math.floor(r() * 3);
+      for (let i = at; i < Math.min(BUCKETS, at + len); i++) b[i] += width * extra;
+    }
+    replays[w.videoId] = { videoId: w.videoId, title: w.title, channelId: w.channelId, channelName: w.channelName, duration: w.duration, b, pos: Math.round(seen * width), updatedAt: w.endedAt };
+  }
+
   const activeDays = [...new Set(watches.map((w) => new Date(w.timestamp).toISOString().slice(0, 10)))];
   return {
     meta: { schemaVersion: 1, installedAt: start.getTime(), activeDays, lastSubscriptionSync: now, lastApiSync: now, takeoutImportedAt: null },
@@ -219,5 +235,6 @@ export function makeSampleDatabase(now = Date.now()): Database {
       },
     ],
     memberId: 'sample-me',
+    replays,
   };
 }

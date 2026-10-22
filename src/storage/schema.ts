@@ -12,6 +12,8 @@
  *   - "observed" captured live when the extension saw the change happen
  */
 
+import type { HeatDelta, ReplayHeat } from '../replay/heat';
+
 export const SCHEMA_VERSION = 1;
 
 export type DataSource = 'tracked' | 'takeout' | 'api' | 'page' | 'observed';
@@ -94,6 +96,8 @@ export interface Settings {
   /** Idle gap that ends a viewing session. */
   sessionGapMinutes: number;
   trackShorts: boolean;
+  /** Draw your Replay Map on YouTube's seek bar and offer resume / next-unseen. */
+  replayMap: boolean;
   displayName: string;
   /** OAuth client id for the optional YouTube Data API connection. */
   googleClientId: string;
@@ -150,6 +154,8 @@ export interface Database {
   subscriptions: Record<string, Subscription>;
   groups: FriendGroup[];
   memberId: string;
+  /** Replay Maps by video id. */
+  replays: Record<string, ReplayHeat>;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -157,6 +163,7 @@ export const DEFAULT_SETTINGS: Settings = {
   minWatchSeconds: 5,
   sessionGapMinutes: 30,
   trackShorts: true,
+  replayMap: true,
   displayName: '',
   googleClientId: '',
 };
@@ -164,6 +171,7 @@ export const DEFAULT_SETTINGS: Settings = {
 /** Messages from the content script to the background worker. */
 export type TrackerMessage =
   | { type: 'watch:upsert'; watch: Watch }
+  | { type: 'heat:add'; delta: HeatDelta }
   | {
       type: 'channel:seen';
       channel: {

@@ -25,9 +25,18 @@ After changing code, run `npm run build` again and press the reload icon on Tube
 
 The dashboard opens on install. After that, use the toolbar popup's **Open dashboard** button.
 
-`npm run test:e2e` loads the built extension into Playwright’s Chromium, plays a real YouTube video and a Short, and checks what was recorded (screenshots land in `e2e-output/`).
+`npm run test:e2e` loads the built extension into Playwright’s Chromium (set `E2E_CHANNEL=msedge` to use an installed Edge instead), plays a real YouTube video and a Short, and checks what was recorded (screenshots land in `e2e-output/`).
 
 `npm run dev` serves the dashboard at `http://localhost:5173/dashboard.html` outside the extension (storage falls back to `localStorage`). Use **Preview with sample data** there to see a populated UI.
+
+## Replay Map
+
+TubeStat draws your own viewing on YouTube's seek bar: a thin strip above the timeline that shows the parts of the video you've already watched, the parts you've replayed (yellow at 2×, magenta at 3× or more), and the gaps you skipped. When you come back to a video you've partly seen, a small chip offers **Resume** or **Next unseen** in one click.
+
+- It's measured on the video's own timeline while it plays, so 2× speed still counts once and seeking past a part never marks it seen.
+- Each video's map is 120 slices stored under `h:<videoId>`, summed across every viewing (`src/replay/heat.ts`).
+- The stretches you replay most show up under **Insights → Moments you replay**, each linking straight to that timestamp.
+- Turn it off in **Profile → Replay Map on YouTube**. Shorts and live streams aren't mapped.
 
 ## What can and can't be known
 
@@ -62,6 +71,7 @@ src/
   youtube/     collection: page-bridge (MAIN world player reader), content (isolated tracker host),
                parse, Data API client, Takeout parser
   tracking/    WatchTracker: player samples → Watch records
+  replay/      Replay Map: per-video heat model, seek-bar strip and resume chip
   storage/     schema, chrome.storage wrapper, month-sharded watches, serialized mutations
   background/  service worker, the only writer of tracked data
   analytics/   periods, categories (modular classifier), engine (aggregates, sessions, streaks),

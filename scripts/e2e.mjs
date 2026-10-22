@@ -11,7 +11,7 @@ const out = resolve(import.meta.dirname, '../e2e-output');
 const headless = !process.argv.includes('--headed');
 
 const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), 'tubestat-e2e-')), {
-  channel: 'chromium',
+  channel: process.env.E2E_CHANNEL ?? 'chromium',
   headless,
   viewport: { width: 1280, height: 860 },
   args: [`--disable-extensions-except=${dist}`, `--load-extension=${dist}`, '--autoplay-policy=no-user-gesture-required', '--mute-audio'],
@@ -43,6 +43,16 @@ async function play(page, url, seconds) {
 const page = context.pages()[0] ?? (await context.newPage());
 console.log('playing a long-form video for 45s…');
 await play(page, 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 45);
+const stripDrawn = await page.locator('#tubestat-replay-strip').count();
+console.log(`replay strip on the seek bar: ${stripDrawn ? 'yes' : 'no'}`);
+await page.goto('about:blank');
+await sleep(1500);
+console.log('reopening it to check the Replay Map chip…');
+await play(page, 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 6);
+const chip = await page.locator('#tubestat-replay-chip').count();
+console.log(`replay chip: ${chip ? 'yes' : 'no'}`);
+await page.hover('#movie_player');
+await page.locator('#movie_player').screenshot({ path: join(out, 'replay-map.png') });
 console.log('playing a Short for 20s…');
 await play(page, 'https://www.youtube.com/shorts', 20);
 await page.goto('about:blank'); // triggers the pagehide flush
@@ -69,7 +79,16 @@ await sleep(1000);
 await popup.screenshot({ path: join(out, 'popup.png') });
 console.log(`\nscreenshots in ${out}`);
 
-const ok = watches.some((w) => !w.isShort && w.watchedSeconds > 10 && w.channelId) && watches.some((w) => w.isShort);
+const heat = Object.entries(data).filter(([k]) => k.startsWith('h:')).map(([, v]) => v);
+for (const h of heat) {
+  const width = h.duration / h.b.length;
+  const seen = h.b.filter((s) => s / width >= 0.5).length;
+  console.log(`replay map ${h.videoId}: ${seen}/${h.b.length} slices seen, last position ${Math.round(h.pos)}s`);
+}
+const heatOk = heat.some((h) => h.b.some((s) => s > 0)) && stripDrawn > 0 && chip > 0;
+console.log(`replay map: ${heatOk ? 'ok' : 'missing'}`);
+
+const ok = heatOk && watches.some((w) => !w.isShort && w.watchedSeconds > 10 && w.channelId) && watches.some((w) => w.isShort);
 console.log(ok ? '\nPASS' : '\nFAIL');
 await context.close();
 process.exit(ok ? 0 : 1);

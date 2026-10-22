@@ -11,6 +11,7 @@ import { PageTitle } from '../components/Shell';
 import { Avatar, Empty, OgBadge, Provenance, Scrubber, Section } from '../components/ui';
 import { BarChart, CompareBars } from '../components/charts';
 import type { OgTier } from '../analytics/og';
+import { ReplayMoments } from '../components/ReplayMoments';
 
 const TIER_ORDER: OgTier[] = ['DAY ONE', 'OG', 'EARLY', 'ESTABLISHED', 'RECENT'];
 const WIN_COLORS = ['var(--color-bar-yellow)', 'var(--color-bar-cyan)', 'var(--color-bar-green)', 'var(--color-bar-magenta)', 'var(--color-bar-blue)', 'var(--color-bar-red)'];
@@ -95,6 +96,8 @@ export function Insights() {
           </p>
         )}
       </Section>
+
+      <ReplayMoments replays={db.replays} />
 
       <Section title="How early you were" className="mt-20" aside={ogs.length ? `${ogs.length} creators` : undefined}>
         {ogs.length ? (
