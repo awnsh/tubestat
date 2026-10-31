@@ -129,7 +129,8 @@ export function makeSampleDatabase(now = Date.now()): Database {
           isShort,
           isLive: false,
           ytCategory: c.cat,
-          source: 'tracked',
+          // Every seventh video was "watched on the phone" and read from the history page.
+          source: n % 7 === 0 && !isShort ? 'history' : 'tracked',
         });
         t += (watched + 10 + r() * 60) * 1000;
       }
@@ -196,7 +197,7 @@ export function makeSampleDatabase(now = Date.now()): Database {
 
   const activeDays = [...new Set(watches.map((w) => new Date(w.timestamp).toISOString().slice(0, 10)))];
   return {
-    meta: { schemaVersion: 1, installedAt: start.getTime(), activeDays, lastSubscriptionSync: now, lastApiSync: now, takeoutImportedAt: null },
+    meta: { schemaVersion: 1, installedAt: start.getTime(), activeDays, lastSubscriptionSync: now, lastApiSync: now, takeoutImportedAt: null, lastHistorySync: now },
     settings: { ...DEFAULT_SETTINGS, displayName: 'Sam' },
     watches,
     channels,

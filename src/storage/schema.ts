@@ -10,13 +10,18 @@
  *   - "page"     read from a YouTube page you visited (verified, but YouTube
  *                rounds public numbers, e.g. "1.23M")
  *   - "observed" captured live when the extension saw the change happen
+ *   - "history"  read from youtube.com/feed/history, which lists what you
+ *                watched on every signed-in device, phone included (verified
+ *                that you watched it and on which day; watch time is an
+ *                estimate from YouTube's red resume bar)
  */
 
 import type { HeatDelta, ReplayHeat } from '../replay/heat';
+import type { HistoryItem } from '../youtube/bridge-protocol';
 
 export const SCHEMA_VERSION = 1;
 
-export type DataSource = 'tracked' | 'takeout' | 'api' | 'page' | 'observed';
+export type DataSource = 'tracked' | 'takeout' | 'api' | 'page' | 'observed' | 'history';
 
 /** One viewing of one video. Re-watching later creates a new record. */
 export interface Watch {
@@ -98,6 +103,10 @@ export interface Settings {
   trackShorts: boolean;
   /** Draw your Replay Map on YouTube's seek bar and offer resume / next-unseen. */
   replayMap: boolean;
+  /** Ask GitHub for new releases (copies not installed from the Web Store). */
+  checkUpdates: boolean;
+  /** Read youtube.com/feed/history when you open it, to add viewing from other devices. */
+  syncHistoryPage: boolean;
   displayName: string;
   /** OAuth client id for the optional YouTube Data API connection. */
   googleClientId: string;
@@ -111,6 +120,8 @@ export interface Meta {
   lastSubscriptionSync: number | null;
   lastApiSync: number | null;
   takeoutImportedAt: number | null;
+  /** Last time entries were read from youtube.com/feed/history. */
+  lastHistorySync: number | null;
 }
 
 export interface GroupMember {
@@ -164,6 +175,8 @@ export const DEFAULT_SETTINGS: Settings = {
   sessionGapMinutes: 30,
   trackShorts: true,
   replayMap: true,
+  checkUpdates: true,
+  syncHistoryPage: true,
   displayName: '',
   googleClientId: '',
 };
@@ -190,6 +203,7 @@ export type TrackerMessage =
       complete: boolean;
     }
   | { type: 'takeout:import'; watches: Watch[]; channels: Array<{ channelId: string; channelName: string }> }
+  | { type: 'history:import'; items: HistoryItem[] }
   | { type: 'api:apply'; payload: ApiSyncPayload }
   | { type: 'data:deleteAll' }
   | { type: 'tracker:ping' };

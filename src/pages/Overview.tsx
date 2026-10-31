@@ -5,7 +5,7 @@ import { elapsedComparable, previousRange, rangeFor, type PeriodKind } from '../
 import { generateInsights } from '../analytics/insights';
 import { formatDate, formatDuration, formatHour } from '../lib/format';
 import { PageTitle } from '../components/Shell';
-import { Avatar, Change, CountUp, Duration, Scrubber, Section, Segmented, Thumb, Button, Provenance } from '../components/ui';
+import { Avatar, Change, CountUp, Duration, FormatSplit, Scrubber, Section, Segmented, ShortBadge, Thumb, Button, Provenance } from '../components/ui';
 import { categoryColor } from '../lib/colors';
 import { BarChart, type BarDatum } from '../components/charts';
 
@@ -112,6 +112,13 @@ export function Overview({ welcome }: { welcome?: boolean }) {
         <Figure value={<CountUp value={s.creators} />} label="creators" />
         {kind !== 'all' ? <Figure value={<Change value={change} />} label={VS[kind]} /> : <Figure value={streaks.longest.toLocaleString()} label="day longest streak" />}
       </div>
+      {s.shorts ? <FormatSplit className="mt-8 max-w-xl" longSeconds={s.longSeconds} shortSeconds={s.shortSeconds} longCount={s.longform} shortCount={s.shorts} /> : null}
+      {s.otherDeviceVideos ? (
+        <Provenance>
+          Includes {s.otherDeviceVideos.toLocaleString()} {s.otherDeviceVideos === 1 ? 'video' : 'videos'} from your phone and other devices, read from your YouTube history
+          {s.estimatedSeconds ? <>, with about {formatDuration(s.estimatedSeconds)} of watch time estimated from how far you got</> : null}.
+        </Provenance>
+      ) : null}
       {s.unknownTimeVideos ? <Provenance>{s.unknownTimeVideos.toLocaleString()} imported videos in this period have no recorded watch time, so they count as videos but not hours.</Provenance> : null}
 
       <div className="mt-12">
@@ -183,10 +190,11 @@ export function Overview({ welcome }: { welcome?: boolean }) {
         <ul className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-4">
           {recent.map((w) => (
             <li key={w.id} className="min-w-0">
-              <a href={`https://www.youtube.com/watch?v=${w.videoId}`} target="_blank" rel="noreferrer" className="group block">
+              <a href={w.isShort ? `https://www.youtube.com/shorts/${w.videoId}` : `https://www.youtube.com/watch?v=${w.videoId}`} target="_blank" rel="noreferrer" className="group block">
                 <div className="relative">
                   <Thumb src={w.thumbnail} />
                   {w.percentageWatched != null ? <Scrubber value={w.percentageWatched} max={100} animate={false} className="absolute inset-x-0 bottom-0 rounded-none" /> : null}
+                  {w.isShort ? <ShortBadge className="absolute left-1.5 top-1.5" /> : null}
                 </div>
                 <p className="mt-2 line-clamp-2 text-[13px] leading-snug group-hover:underline">{w.title || 'Untitled video'}</p>
                 <p className="mt-1 truncate text-[12px] text-dim">{w.channelName}</p>

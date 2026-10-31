@@ -6,8 +6,8 @@
  * It only reads, never modifies the page, and posts a small sample once a
  * second to the isolated tracker script. It has no access to extension APIs.
  */
-import { BRIDGE_SOURCE, type BridgeMessage, type PlayerSample } from './bridge-protocol';
-import { handleFromUrl, parseCount } from './parse';
+import { BRIDGE_SOURCE, type BridgeMessage, type HistoryItem, type PlayerSample } from './bridge-protocol';
+import { handleFromUrl, parseCount, parseHistoryDay, parseLength } from './parse';
 
 interface YtPlayer extends HTMLElement {
   getPlayerResponse?: () => any;
@@ -105,6 +105,107 @@ function scanSubscriptions() {
   post({ kind: 'subscriptions', channels, complete });
 }
 
+/* ---------- youtube.com/feed/history: viewing from your phone and other devices ---------- */
+
+/** Depth-first search of YouTube's renderer data for the first value `pick` accepts. */
+function find(obj: any, pick: (key: string, value: any) => unknown, depth = 0): unknown {
+  if (!obj || typeof obj !== 'object' || depth > 12) return undefined;
+  for (const [k, v] of Object.entries(obj)) {
+    const hit = pick(k, v);
+    if (hit !== undefined && hit !== null && hit !== false) return hit;
+    const deeper = find(v, pick, depth + 1);
+    if (deeper !== undefined) return deeper;
+  }
+  return undefined;
+}
+
+const dataOf = (el: any) => el.data ?? el.__data?.data ?? el.polymerController?.data ?? null;
+
+/**
+ * Reads one history entry, preferring the renderer data YouTube attached to the
+ * element and falling back to what's drawn on the page. Both the older
+ * ytd-video-renderer and the newer lockup view model are understood.
+ */
+function readHistoryEntry(el: Element, day: number): HistoryItem | null {
+  const d = dataOf(el);
+  const link = el.querySelector('a[href*="/watch?v="], a[href*="/shorts/"]') as HTMLAnchorElement | null;
+  const href = link?.getAttribute('href') ?? '';
+  const isShort = /shorts/i.test(el.tagName) || href.includes('/shorts/') || !!find(d, (k) => k === 'reelWatchEndpoint');
+  const videoId =
+    (d?.videoId as string) ||
+    (d?.contentId as string) ||
+    (find(d, (k, v) => (k === 'reelWatchEndpoint' || k === 'watchEndpoint') && v?.videoId) as string) ||
+    href.match(/[?&]v=([\w-]{6,})/)?.[1] ||
+    href.match(/\/shorts\/([\w-]{6,})/)?.[1];
+  if (!videoId) return null;
+
+  const title =
+    textOf(d?.title) ||
+    (find(d, (k, v) => (k === 'lockupMetadataViewModel' ? v?.title?.content : undefined)) as string) ||
+    (find(d, (k, v) => (k === 'primaryText' ? v?.content : undefined)) as string) ||
+    el.querySelector('#video-title, h3, .yt-lockup-metadata-view-model-wiz__title, [class*="title"]')?.textContent?.trim() ||
+    '';
+  const channelId = (find(d, (k, v) => k === 'browseId' && typeof v === 'string' && v.startsWith('UC') && v) as string) || '';
+  const channelLink = el.querySelector('a[href^="/@"], a[href^="/channel/"]') as HTMLAnchorElement | null;
+  const channelName =
+    textOf(d?.ownerText) ||
+    textOf(d?.shortBylineText) ||
+    (find(d, (k, v) => (k === 'metadataParts' && Array.isArray(v) ? v[0]?.text?.content : undefined)) as string) ||
+    channelLink?.textContent?.trim() ||
+    '';
+  const handle = handleFromUrl(channelLink?.getAttribute('href')) ?? handleFromUrl(find(d, (k, v) => k === 'canonicalBaseUrl' && v) as string);
+
+  const lengthText =
+    textOf(d?.lengthText) ||
+    (find(d, (k, v) => (k === 'text' && typeof v === 'string' && parseLength(v) != null ? v : undefined)) as string) ||
+    el.querySelector('ytd-thumbnail-overlay-time-status-renderer, badge-shape, .badge-shape-wiz__text')?.textContent?.trim();
+  const duration = parseLength(lengthText) ?? 0;
+
+  let percent = find(d, (k, v) => (k === 'percentDurationWatched' || k === 'startPercent') && typeof v === 'number' && { v }) as { v: number } | undefined;
+  if (!percent) {
+    const bar = el.querySelector('#progress, [class*="progress-bar-segment"], [class*="ProgressBarSegment"]') as HTMLElement | null;
+    const w = parseFloat(bar?.style.width ?? '');
+    if (Number.isFinite(w)) percent = { v: w };
+  }
+  return {
+    videoId,
+    title,
+    channelId,
+    channelName,
+    handle,
+    day,
+    duration,
+    percent: percent ? Math.max(0, Math.min(100, percent.v)) : null,
+    isShort,
+  };
+}
+
+const sentHistory = new Set<string>();
+function scanHistory() {
+  if (location.pathname !== '/feed/history') return;
+  const lang = document.documentElement.lang || navigator.language || 'en';
+  const items: HistoryItem[] = [];
+  for (const section of Array.from(document.querySelectorAll('ytd-item-section-renderer'))) {
+    const header =
+      section.querySelector('ytd-item-section-header-renderer #title, #header #title, #header h2')?.textContent ??
+      textOf(dataOf(section)?.header?.itemSectionHeaderRenderer?.title);
+    const day = parseHistoryDay(header, lang);
+    if (day == null) continue;
+    const entries = section.querySelectorAll('ytd-video-renderer, yt-lockup-view-model, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2, ytd-reel-item-renderer');
+    for (const el of Array.from(entries)) {
+      // A lockup nested in another matched element is the same entry.
+      if (el.parentElement?.closest('ytd-video-renderer, yt-lockup-view-model, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2')) continue;
+      const item = readHistoryEntry(el, day);
+      if (!item) continue;
+      const key = `${item.videoId}:${day}:${item.percent}:${!!item.channelId}`;
+      if (sentHistory.has(key)) continue;
+      sentHistory.add(key);
+      items.push(item);
+    }
+  }
+  if (items.length) post({ kind: 'history', items });
+}
+
 setInterval(() => {
   try {
     post({ kind: 'tick', sample: sample() });
@@ -116,6 +217,11 @@ setInterval(() => {
 setInterval(() => {
   try {
     scanSubscriptions();
+  } catch {
+    /* ignore */
+  }
+  try {
+    scanHistory();
   } catch {
     /* ignore */
   }

@@ -38,6 +38,16 @@ TubeStat draws your own viewing on YouTube's seek bar: a thin strip above the ti
 - The stretches you replay most show up under **Insights → Moments you replay**, each linking straight to that timestamp.
 - Turn it off in **Profile → Replay Map on YouTube**. Shorts and live streams aren't mapped.
 
+## Updates
+
+Chrome Web Store installs are updated by Chrome. Chrome never updates an unpacked extension, so those copies check `api.github.com/repos/awnsh/tubestat/releases/latest` at most every 12 hours (`src/update/check.ts`) and show a notice in the popup and dashboard when the release tag (`v1.2.0`) is newer than the manifest version. To update, unzip the new release **into the same folder** and press reload in `chrome://extensions`: the folder path decides an unpacked extension's ID, and the ID owns the data.
+
+To publish a release, run `npm run package`, then attach the zip to a GitHub release tagged `v<version>` and named `tubestat-extension.zip` (the website's download button and the notice link to that name).
+
+## Phone and other devices
+
+The extension can't see the YouTube app, but `youtube.com/feed/history` lists what you watched on every signed-in device. When you open it on desktop, `page-bridge.ts` reads each entry and the day heading it sits under ("Today", "Wednesday", "Oct 12", in the page's language), and the worker saves it as a `history` watch at noon that day. Anything TubeStat already tracked within a day either side is skipped. Watch time is `length × resume bar`, shown as an estimate. Shorts on the history page don't show a channel or a resume bar, so they add videos but no hours or creators. Turn it off in **Profile → Your phone and other devices**.
+
 ## What can and can't be known
 
 TubeStat was built around what YouTube actually exposes. It never invents history.
@@ -55,6 +65,7 @@ TubeStat was built around what YouTube actually exposes. It never invents histor
 | Subscriber count when you subscribed | Only known if captured live, or interpolated from TubeStat's own snapshots | Verified, or labelled estimate |
 | Past subscriber counts | Not published by YouTube | Not shown; growth tracking starts on first visit |
 | History before install | Google Takeout `watch-history.json` import (dates, no watch time) | Verified videos; hours not counted |
+| Viewing on your phone and other devices | `youtube.com/feed/history` when you open it on desktop: day headings, plus how far the red resume bar reaches | Verified videos and days; watch time is an estimate (`length × bar`), Shorts add no hours |
 
 ### OG status
 
@@ -101,4 +112,4 @@ The mark is YouTube's played-progress bar forming the crossbar of a T, with the 
 
 ## Privacy
 
-No viewing data leaves the device. Network requests are only for YouTube thumbnails/avatars and, if connected, the YouTube Data API. Export everything as JSON or delete everything from Profile.
+No viewing data leaves the device. Network requests are only for YouTube thumbnails/avatars, GitHub's latest-release endpoint (the update check, below), and, if connected, the YouTube Data API. Export everything as JSON or delete everything from Profile.

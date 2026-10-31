@@ -3,6 +3,7 @@ import { href } from '../hooks/useRoute';
 import { useData } from '../hooks/useDatabase';
 import { formatSpan } from '../lib/format';
 import { Mark, TestStrip, cx } from './ui';
+import { UpdateNotice } from './UpdateNotice';
 
 export const NAV = [
   { id: 'overview', label: 'Overview' },
@@ -62,6 +63,7 @@ export function Shell({ active, children }: { active: string; children: ReactNod
             </button>
           </div>
         ) : null}
+        {!sample ? <UpdateNotice /> : null}
         <div className="mx-auto max-w-[1040px] px-5 pb-24 pt-8 md:px-14 md:pt-14">{children}</div>
       </main>
     </div>

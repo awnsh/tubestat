@@ -48,6 +48,7 @@
     <ul>
       <li><strong>Videos you play:</strong> the video’s ID, title, channel name and channel ID, length, YouTube’s category for it, whether it’s a Short or a live stream, when you watched, how long it actually played, and how much of it you covered.</li>
       <li><strong>Channels you visit:</strong> name, handle, profile picture address, and public subscriber count, recorded at most once a day.</li>
+      <li><strong>Your YouTube history page, when you open it:</strong> for each video listed on youtube.com/feed/history (which includes what you watched on your phone and other signed-in devices), the same details as above where YouTube shows them, the day it’s listed under, and how far YouTube’s progress bar reaches. You can turn this off in Profile.</li>
       <li><strong>Your subscriptions:</strong> which channels you’re subscribed to, read from YouTube pages you open, and the date you subscribed when YouTube makes it available.</li>
       <li><strong>Your settings,</strong> and any friend groups and stat codes you add.</li>
     </ul>
@@ -60,6 +61,7 @@
     <p>Your viewing data never does. TubeStat makes only these network requests:</p>
     <ul>
       <li><strong>Images from YouTube’s servers</strong> (video thumbnails and channel pictures), to display them in your dashboard and draw share cards.</li>
+      <li><strong>GitHub’s public release page,</strong> at most twice a day, to see whether a newer version of TubeStat is out. It’s a plain request for the latest version number and sends nothing about you. Copies installed from the Chrome Web Store skip it, and you can turn it off in Profile.</li>
       <li><strong>The YouTube Data API, only if you choose to connect your account.</strong> This is off by default. If you turn it on, TubeStat asks Google for read-only access to your subscriptions, reads your subscription list and those channels’ public statistics, and stores the results on your device. The access token is kept in memory only for that sync and is never saved. TubeStat’s use of information received from Google APIs follows the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</li>
     </ul>
 

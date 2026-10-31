@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { durationParts } from '../lib/format';
+import { durationParts, formatDuration } from '../lib/format';
 import type { OgTier } from '../analytics/og';
-import { STRIP, TIER_STYLE, avatarTone } from '../lib/colors';
+import { FORMAT_COLOR, STRIP, TIER_STYLE, avatarTone } from '../lib/colors';
 
 export function cx(...c: Array<string | false | null | undefined>) {
   return c.filter(Boolean).join(' ');
@@ -119,6 +119,42 @@ export function Scrubber({ value, max = 1, tone = 'play', color, head = false, c
         />
       ) : null}
     </div>
+  );
+}
+
+/** Long-form and Shorts watch time as one bar, with both named underneath. */
+export function FormatSplit({ longSeconds, shortSeconds, longCount, shortCount, compact = false, className }: { longSeconds: number; shortSeconds: number; longCount: number; shortCount: number; compact?: boolean; className?: string }) {
+  const total = longSeconds + shortSeconds;
+  const longPct = total ? (longSeconds / total) * 100 : longCount + shortCount ? (longCount / (longCount + shortCount)) * 100 : 0;
+  const label = (secs: number, n: number, noun: string) => (total ? `${formatDuration(secs)}` : `${n.toLocaleString()} ${noun}`);
+  return (
+    <div className={className}>
+      <div className="flex h-[3px] w-full gap-[2px] overflow-hidden rounded-full bg-track">
+        {longPct > 0 ? <div className="grow-x rounded-full" style={{ width: `${longPct}%`, background: FORMAT_COLOR.long }} /> : null}
+        {longPct < 100 && (shortSeconds || shortCount) ? <div className="flex-1 rounded-full" style={{ background: FORMAT_COLOR.shorts }} /> : null}
+      </div>
+      <div className={cx('tnum mt-2 flex justify-between gap-4 text-dim', compact ? 'text-[11px]' : 'text-[13px]')}>
+        <span>
+          <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ background: FORMAT_COLOR.long }} />
+          Long-form <span className="text-paper">{label(longSeconds, longCount, 'videos')}</span>
+          {!compact && total ? <> · {longCount.toLocaleString()} videos</> : null}
+        </span>
+        <span>
+          <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ background: FORMAT_COLOR.shorts }} />
+          Shorts <span className="text-paper">{label(shortSeconds, shortCount, '')}</span>
+          {total ? <> · {shortCount.toLocaleString()}</> : null}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Marks a Short on a thumbnail or in a list. */
+export function ShortBadge({ className }: { className?: string }) {
+  return (
+    <span style={{ background: FORMAT_COLOR.shorts }} className={cx('inline-flex items-center rounded px-1.5 py-[1px] text-[10px] font-bold tracking-[0.06em] text-ink', className)}>
+      SHORT
+    </span>
   );
 }
 

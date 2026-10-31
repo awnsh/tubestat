@@ -5,10 +5,22 @@ import { monthsByYear, periodDetail } from '../analytics/history';
 import { monthKey, monthRange, yearRange, type Range } from '../analytics/periods';
 import { formatDate, formatDuration, monthName } from '../lib/format';
 import { PageTitle } from '../components/Shell';
-import { Avatar, Button, Duration, Empty, Provenance, Scrubber, Section, Segmented, Thumb, cx } from '../components/ui';
-import { categoryColor } from '../lib/colors';
+import { Avatar, Button, Duration, Empty, FormatSplit, Provenance, Scrubber, Section, Segmented, ShortBadge, Thumb, cx } from '../components/ui';
+import { FORMAT_COLOR, categoryColor } from '../lib/colors';
 import { Wrapped } from '../components/Wrapped';
 import { ShareDialog } from '../components/ShareDialog';
+import { FORMATS, type Format } from '../analytics/engine';
+
+// Kept outside React so the filter survives moving between the timeline and a month.
+let lastFormat: Format = 'all';
+function useFormat(): [Format, (f: Format) => void] {
+  const [format, setFormat] = useState(lastFormat);
+  return [format, (f) => setFormat((lastFormat = f))];
+}
+
+function FormatFilter({ value, onChange }: { value: Format; onChange: (f: Format) => void }) {
+  return <Segmented label="Format" options={FORMATS} value={value} onChange={onChange} />;
+}
 
 export function History({ sub }: { sub?: string }) {
   if (sub && /^\d{4}-\d{2}$/.test(sub)) return <PeriodPage range={monthRange(sub)} />;
@@ -37,14 +49,18 @@ export function History({ sub }: { sub?: string }) {
 }
 
 function Timeline() {
-  const { analytics: a } = useData();
+  const { analytics: all } = useData();
+  const [format, setFormat] = useFormat();
+  const a = all.forFormat(format);
   const years = useMemo(() => monthsByYear(a), [a]);
-  if (!years.length) return <Empty title="Your history starts with your first video">Each month you use YouTube adds a row here.</Empty>;
+  if (!all.hasData) return <Empty title="Your history starts with your first video">Each month you use YouTube adds a row here.</Empty>;
   const max = Math.max(...years.flatMap((y) => y.months.map((m) => m.summary.watchSeconds)), 1);
   const thisYear = new Date().getFullYear();
 
   return (
     <div className="space-y-16">
+      <FormatFilter value={format} onChange={setFormat} />
+      {!years.length ? <Empty title={`No ${format === 'shorts' ? 'Shorts' : 'long-form videos'} yet`} /> : null}
       {years.map((y) => (
         <section key={y.year}>
           <div className="mb-4 flex items-baseline justify-between border-b border-line pb-4">
@@ -61,7 +77,7 @@ function Timeline() {
               <li key={m.key}>
                 <a href={href('history', m.key)} className="group grid grid-cols-[120px_1fr_auto] items-center gap-6 py-3 md:grid-cols-[160px_1fr_120px_110px]">
                   <span className="display text-[20px] group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">{monthName(m.range.start ? new Date(m.range.start).getMonth() : 0)}</span>
-                  <Scrubber value={m.summary.watchSeconds || m.summary.videos} max={m.summary.watchSeconds ? max : Math.max(...y.months.map((x) => x.summary.videos))} tone={m.summary.watchSeconds ? 'play' : 'buffer'} animate={false} />
+                  <Scrubber value={m.summary.watchSeconds || m.summary.videos} max={m.summary.watchSeconds ? max : Math.max(...y.months.map((x) => x.summary.videos))} tone={m.summary.watchSeconds ? 'play' : 'buffer'} color={format === 'shorts' && m.summary.watchSeconds ? FORMAT_COLOR.shorts : undefined} animate={false} />
                   <span className="tnum text-right text-[15px]">{m.summary.watchSeconds ? formatDuration(m.summary.watchSeconds) : '—'}</span>
                   <span className="tnum hidden text-right text-[13px] text-dim md:block">{m.summary.videos.toLocaleString()} videos</span>
                 </a>
@@ -76,7 +92,9 @@ function Timeline() {
 }
 
 function PeriodPage({ range }: { range: Range }) {
-  const { analytics: a } = useData();
+  const { analytics: all } = useData();
+  const [format, setFormat] = useFormat();
+  const a = all.forFormat(format);
   const d = useMemo(() => periodDetail(a, range), [a, range]);
   const [wrapped, setWrapped] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -95,6 +113,7 @@ function PeriodPage({ range }: { range: Range }) {
           </div>
         ) : null}
       </header>
+      <div className="mb-10"><FormatFilter value={format} onChange={setFormat} /></div>
 
       {!d.summary.videos ? (
         <Empty title={`Nothing recorded in ${range.label}`} />
@@ -109,6 +128,7 @@ function PeriodPage({ range }: { range: Range }) {
             <Stat value={d.summary.creators.toLocaleString()} label="creators" />
             <Stat value={d.summary.activeDays.toLocaleString()} label="days you watched" />
           </div>
+          {format === 'all' && d.summary.shorts ? <FormatSplit className="mt-8 max-w-xl" longSeconds={d.summary.longSeconds} shortSeconds={d.summary.shortSeconds} longCount={d.summary.longform} shortCount={d.summary.shorts} /> : null}
           {d.summary.unknownTimeVideos ? <Provenance>{d.summary.unknownTimeVideos.toLocaleString()} imported videos have no watch time and aren’t included in the hours.</Provenance> : null}
 
           <div className="mt-14 grid gap-14 md:grid-cols-2">
@@ -152,7 +172,10 @@ function PeriodPage({ range }: { range: Range }) {
             <Section title="Most watched video">
               {d.topVideos[0] ? (
                 <a href={`https://www.youtube.com/watch?v=${d.topVideos[0].videoId}`} target="_blank" rel="noreferrer" className="group flex gap-4">
-                  <Thumb src={d.topVideos[0].thumbnail} className="w-40 shrink-0" />
+                  <div className="relative w-40 shrink-0">
+                    <Thumb src={d.topVideos[0].thumbnail} />
+                    {d.topVideos[0].isShort ? <ShortBadge className="absolute left-1.5 top-1.5" /> : null}
+                  </div>
                   <div className="min-w-0">
                     <p className="line-clamp-2 text-[15px] group-hover:underline">{d.topVideos[0].title || 'Untitled video'}</p>
                     <p className="mt-1 text-[13px] text-dim">{d.topVideos[0].channelName}</p>
@@ -278,8 +301,9 @@ function TimeMachine() {
           <p className="mb-4 text-[13px] text-dim">What you were watching</p>
           <ul className="grid grid-cols-2 gap-4">
             {d.topVideos.slice(0, 4).map((v) => (
-              <li key={v.videoId}>
+              <li key={v.videoId} className="relative">
                 <Thumb src={v.thumbnail} />
+                {v.isShort ? <ShortBadge className="absolute left-1.5 top-1.5" /> : null}
                 <p className="mt-2 line-clamp-2 text-[13px]">{v.title || 'Untitled video'}</p>
                 <p className="mt-0.5 truncate text-[12px] text-dim">{v.channelName}</p>
               </li>

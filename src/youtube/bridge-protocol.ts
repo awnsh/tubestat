@@ -35,4 +35,28 @@ export interface BridgeSubscriptions {
   complete: boolean;
 }
 
-export type BridgeMessage = BridgeTick | BridgeSubscriptions;
+/** One entry read from youtube.com/feed/history: a video you watched on any signed-in device. */
+export interface HistoryItem {
+  videoId: string;
+  title: string;
+  /** Empty when YouTube doesn't show the channel (Shorts shelves). */
+  channelId: string;
+  channelName: string;
+  /** "@handle", used to find the channel when only the link is on the page. */
+  handle: string | null;
+  /** Local midnight of the day the entry is listed under. */
+  day: number;
+  /** Video length in seconds, 0 when not shown. */
+  duration: number;
+  /** How far YouTube's red resume bar reaches, 0–100. Null when there's no bar. */
+  percent: number | null;
+  isShort: boolean;
+}
+
+export interface BridgeHistory {
+  source: typeof BRIDGE_SOURCE;
+  kind: 'history';
+  items: HistoryItem[];
+}
+
+export type BridgeMessage = BridgeTick | BridgeSubscriptions | BridgeHistory;

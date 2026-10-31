@@ -7,6 +7,8 @@ import { kvClear, kvGet, kvGetMany, kvSet } from './kv';
 import { newMeta, shardKey } from './db';
 import { applyDelta, heatKey, type HeatDelta, type ReplayHeat } from '../replay/heat';
 import type { ApiSyncPayload, Channel, DataSource, Meta, Subscription, TrackerMessage, Watch } from './schema';
+import type { HistoryItem } from '../youtube/bridge-protocol';
+import { thumbnailFor } from '../youtube/parse';
 
 let queue: Promise<unknown> = Promise.resolve();
 function locked<T>(fn: () => Promise<T>): Promise<T> {
@@ -243,9 +245,11 @@ export function importTakeout(watches: Watch[], channelNames: Array<{ channelId:
     for (const [k, list] of byShard) {
       const shard = { ...((existing[k] as Record<string, Watch>) ?? {}) };
       const tracked = Object.values(shard).filter((w) => w.source === 'tracked');
+      const fromHistory = new Set(Object.values(shard).filter((w) => w.source === 'history').map((w) => `${w.videoId}:${dayKey(w.timestamp)}`));
       for (const w of list) {
         if (shard[w.id]) continue;
         if (tracked.some((t) => t.videoId === w.videoId && Math.abs(t.timestamp - w.timestamp) < 15 * 60_000)) continue;
+        if (fromHistory.has(`${w.videoId}:${dayKey(w.timestamp)}`)) continue;
         shard[w.id] = w;
         added++;
         const ch = ensureChannel(channels, w.channelId, w.channelName, w.timestamp);
@@ -256,6 +260,77 @@ export function importTakeout(watches: Watch[], channelNames: Array<{ channelId:
     }
     for (const { channelId, channelName } of channelNames) ensureChannel(channels, channelId, channelName);
     meta.takeoutImportedAt = Date.now();
+    await kvSet({ ...writes, channels, meta });
+    return added;
+  });
+}
+
+const DAY_MS = 86_400_000;
+
+/**
+ * Adds entries read from youtube.com/feed/history: what you watched on your
+ * phone, TV or another browser. YouTube says which day, not what time, so each
+ * is placed at noon (or now, for today). Watch time is estimated from how far
+ * the red resume bar reaches, and is null when there's no bar or no length.
+ * Anything TubeStat already tracked here within a day either side is skipped,
+ * so desktop viewing is never counted twice.
+ */
+export function importHistory(items: HistoryItem[]) {
+  return locked(async () => {
+    const { meta, channels } = await loadCore();
+    const now = Date.now();
+    const byHandle = new Map(Object.values(channels).filter((c) => c.handle).map((c) => [c.handle!.toLowerCase(), c.channelId]));
+    const keys = new Set<string>();
+    for (const i of items) for (const t of [i.day - DAY_MS, i.day, i.day + DAY_MS]) keys.add(shardKey(t));
+    const shards = await kvGetMany([...keys]);
+    const writes: Record<string, Record<string, Watch>> = {};
+    const shard = (k: string) => (writes[k] ??= { ...((shards[k] as Record<string, Watch>) ?? {}) });
+    let added = 0;
+
+    for (const item of items) {
+      const near = [item.day - DAY_MS, item.day, item.day + DAY_MS].flatMap((t) => Object.values(shard(shardKey(t))));
+      const lo = item.day - DAY_MS;
+      const hi = item.day + 2 * DAY_MS;
+      if (near.some((w) => w.videoId === item.videoId && w.source !== 'history' && w.timestamp >= lo && w.timestamp < hi)) continue;
+
+      const channelId = item.channelId || (item.handle ? byHandle.get(item.handle.toLowerCase()) : undefined) || '';
+      const timestamp = Math.min(item.day + DAY_MS / 2, now);
+      const id = `history:${item.videoId}:${dayKey(item.day)}`;
+      const month = shard(shardKey(timestamp));
+      const prev = month[id];
+      const watchedSeconds = item.percent != null && item.duration ? Math.round((item.duration * item.percent) / 100) : null;
+      // A later look at the page can show more progress, or the channel; keep the best of both.
+      const next: Watch = {
+        id,
+        videoId: item.videoId,
+        title: item.title || prev?.title || '',
+        channelId: channelId || prev?.channelId || '',
+        channelName: item.channelName || prev?.channelName || '',
+        thumbnail: thumbnailFor(item.videoId),
+        duration: item.duration || prev?.duration || 0,
+        watchedSeconds: watchedSeconds == null ? prev?.watchedSeconds ?? null : Math.max(watchedSeconds, prev?.watchedSeconds ?? 0),
+        percentageWatched: item.percent ?? prev?.percentageWatched ?? null,
+        timestamp: prev?.timestamp ?? timestamp,
+        endedAt: prev?.endedAt ?? timestamp,
+        completed: (item.percent ?? prev?.percentageWatched ?? 0) >= 90,
+        isShort: item.isShort,
+        isLive: false,
+        ytCategory: prev?.ytCategory ?? null,
+        source: 'history',
+      };
+      if (prev && JSON.stringify(prev) === JSON.stringify(next)) continue;
+      month[id] = next;
+      if (!prev) added++;
+
+      if (next.channelId) {
+        const ch = ensureChannel(channels, next.channelId, next.channelName, next.timestamp);
+        ch.firstSeen = Math.min(ch.firstSeen, next.timestamp);
+        ch.totalWatchTime += Math.max(0, (next.watchedSeconds ?? 0) - (prev?.channelId === next.channelId ? prev.watchedSeconds ?? 0 : 0));
+        if (!prev || prev.channelId !== next.channelId) ch.videosWatched += 1;
+        ch.updatedAt = now;
+      }
+    }
+    meta.lastHistorySync = now;
     await kvSet({ ...writes, channels, meta });
     return added;
   });
@@ -280,6 +355,8 @@ export async function handleMessage(msg: TrackerMessage): Promise<unknown> {
       return syncSubscriptions(msg);
     case 'takeout:import':
       return importTakeout(msg.watches, msg.channels);
+    case 'history:import':
+      return importHistory(msg.items);
     case 'api:apply':
       return applyApiSync(msg.payload);
     case 'data:deleteAll':

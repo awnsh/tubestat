@@ -40,6 +40,7 @@ export function newMeta(): Meta {
     lastSubscriptionSync: null,
     lastApiSync: null,
     takeoutImportedAt: null,
+    lastHistorySync: null,
   };
 }
 

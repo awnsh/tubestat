@@ -13,12 +13,18 @@ export interface Summary {
   creators: number;
   shorts: number;
   longform: number;
+  /** Watch time split by format; together they make up watchSeconds. */
+  shortSeconds: number;
+  longSeconds: number;
   /** Long-form videos with completion data, and how many were finished. */
   startedLong: number;
   completedLong: number;
   activeDays: number;
   /** Imported viewings whose watch time is unknown. */
   unknownTimeVideos: number;
+  /** Viewings read from your YouTube history page (phone, TV, other browsers), and their estimated watch time. */
+  otherDeviceVideos: number;
+  estimatedSeconds: number;
 }
 
 export interface CreatorStat {
@@ -27,6 +33,9 @@ export interface CreatorStat {
   avatar: string | null;
   watchSeconds: number;
   videos: number;
+  /** How much of the above came from Shorts. */
+  shortSeconds: number;
+  shorts: number;
   sessions: number;
   firstSeen: number;
   lastSeen: number;
@@ -53,11 +62,21 @@ export interface VideoStat {
   channelId: string;
   channelName: string;
   thumbnail: string;
+  isShort: boolean;
   watchSeconds: number;
   views: number;
 }
 
 export type CreatorMetric = 'time' | 'videos' | 'sessions';
+
+/** Which kind of video a view is restricted to. */
+export type Format = 'all' | 'long' | 'shorts';
+
+export const FORMATS: Array<{ id: Format; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'long', label: 'Long-form' },
+  { id: 'shorts', label: 'Shorts' },
+];
 
 const inRange = (w: Watch, r: Range) => w.timestamp >= r.start && w.timestamp < r.end;
 const secs = (w: Watch) => w.watchedSeconds ?? 0;
@@ -98,14 +117,24 @@ export class Analytics {
   summary(r: Range, list = this.in(r)): Summary {
     const creators = new Set<string>();
     const days = new Set<string>();
-    const s: Summary = { watchSeconds: 0, videos: 0, creators: 0, shorts: 0, longform: 0, startedLong: 0, completedLong: 0, activeDays: 0, unknownTimeVideos: 0 };
+    const s: Summary = { watchSeconds: 0, videos: 0, creators: 0, shorts: 0, longform: 0, shortSeconds: 0, longSeconds: 0, startedLong: 0, completedLong: 0, activeDays: 0, unknownTimeVideos: 0, otherDeviceVideos: 0, estimatedSeconds: 0 };
     for (const w of list) {
       s.watchSeconds += secs(w);
       s.videos++;
-      creators.add(w.channelId);
+      // Shorts read from a history shelf can come without a channel.
+      if (w.channelId) creators.add(w.channelId);
+      if (w.source === 'history') {
+        s.otherDeviceVideos++;
+        s.estimatedSeconds += secs(w);
+      }
       days.add(dayKey(w.timestamp));
-      if (w.isShort) s.shorts++;
-      else s.longform++;
+      if (w.isShort) {
+        s.shorts++;
+        s.shortSeconds += secs(w);
+      } else {
+        s.longform++;
+        s.longSeconds += secs(w);
+      }
       if (w.watchedSeconds == null) s.unknownTimeVideos++;
       if (!w.isShort && !w.isLive && w.percentageWatched != null) {
         s.startedLong++;
@@ -120,6 +149,7 @@ export class Analytics {
   topCreators(r: Range, metric: CreatorMetric = 'time', limit = 50): CreatorStat[] {
     const map = new Map<string, CreatorStat>();
     for (const w of this.in(r)) {
+      if (!w.channelId) continue;
       let c = map.get(w.channelId);
       if (!c) {
         const ch = this.channels[w.channelId];
@@ -129,6 +159,8 @@ export class Analytics {
           avatar: ch?.avatar ?? null,
           watchSeconds: 0,
           videos: 0,
+          shortSeconds: 0,
+          shorts: 0,
           sessions: 0,
           firstSeen: w.timestamp,
           lastSeen: w.timestamp,
@@ -137,6 +169,10 @@ export class Analytics {
       }
       c.watchSeconds += secs(w);
       c.videos++;
+      if (w.isShort) {
+        c.shorts++;
+        c.shortSeconds += secs(w);
+      }
       c.lastSeen = Math.max(c.lastSeen, w.timestamp);
     }
     for (const s of this.sessions) {
@@ -206,7 +242,8 @@ export class Analytics {
   hourly(r: Range): number[] {
     const hours = new Array(24).fill(0);
     for (const w of this.in(r)) {
-      if (!w.watchedSeconds) continue;
+      // History-page entries only know the day, not the hour.
+      if (!w.watchedSeconds || w.source === 'history') continue;
       // Spread each viewing across the hours it actually spanned.
       let t = w.timestamp;
       let remaining = w.watchedSeconds;
@@ -260,7 +297,7 @@ export class Analytics {
   topVideos(r: Range, limit = 5): VideoStat[] {
     const map = new Map<string, VideoStat>();
     for (const w of this.in(r)) {
-      const v = map.get(w.videoId) ?? { videoId: w.videoId, title: w.title, channelId: w.channelId, channelName: w.channelName, thumbnail: w.thumbnail, watchSeconds: 0, views: 0 };
+      const v = map.get(w.videoId) ?? { videoId: w.videoId, title: w.title, channelId: w.channelId, channelName: w.channelName, thumbnail: w.thumbnail, isShort: w.isShort, watchSeconds: 0, views: 0 };
       v.watchSeconds += secs(w);
       v.views++;
       if (!v.title && w.title) v.title = w.title;
@@ -309,6 +346,19 @@ export class Analytics {
   creatorWatches(channelId: string): Watch[] {
     return this.watches.filter((w) => w.channelId === channelId);
   }
+
+  private formatCache = new Map<Format, Analytics>();
+
+  /** The same analytics over only Shorts or only long-form videos. */
+  forFormat(f: Format): Analytics {
+    if (f === 'all') return this;
+    let a = this.formatCache.get(f);
+    if (!a) {
+      a = new Analytics({ ...this.db, watches: this.watches.filter((w) => w.isShort === (f === 'shorts')) });
+      this.formatCache.set(f, a);
+    }
+    return a;
+  }
 }
 
 export interface Milestone {
@@ -334,7 +384,7 @@ export function milestones(a: Analytics): Milestone[] {
   for (const w of a.watches) {
     secsSoFar += w.watchedSeconds ?? 0;
     videos++;
-    creators.add(w.channelId);
+    if (w.channelId) creators.add(w.channelId);
     for (const h of HOUR_MARKS) check(`h${h}`, secsSoFar / 3600, h, w.timestamp);
     for (const v of VIDEO_MARKS) check(`v${v}`, videos, v, w.timestamp);
     for (const c of CREATOR_MARKS) check(`c${c}`, creators.size, c, w.timestamp);

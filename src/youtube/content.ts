@@ -97,6 +97,13 @@ window.addEventListener('message', (event) => {
     return;
   }
 
+  if (msg.kind === 'history') {
+    if (settings.trackingEnabled && settings.syncHistoryPage) {
+      send({ type: 'history:import', items: settings.trackShorts ? msg.items : msg.items.filter((i) => !i.isShort) });
+    }
+    return;
+  }
+
   const sample = msg.sample;
   lastSample = sample;
   const now = Date.now();

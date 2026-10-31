@@ -10,6 +10,7 @@ import { formatDate, formatDuration, formatSpan } from '../lib/format';
 import { rangeFor } from '../analytics/periods';
 import { PageTitle } from '../components/Shell';
 import { Button, Provenance, Section, cx } from '../components/ui';
+import { currentVersion } from '../update/check';
 
 export function Profile() {
   const { analytics: a, db, sample, setSample, reload } = useData();
@@ -56,11 +57,13 @@ export function Profile() {
           <Toggle label="Record my YouTube viewing" detail="When off, nothing new is recorded. Everything already recorded stays." on={db.settings.trackingEnabled} disabled={sample} onChange={(v) => update({ trackingEnabled: v })} />
           <Toggle label="Include Shorts" detail="Shorts are recorded separately from long-form videos, so you can always tell them apart." on={db.settings.trackShorts} disabled={sample} onChange={(v) => update({ trackShorts: v })} />
           <Toggle label="Replay Map on YouTube" detail="Shows which parts of a video you’ve already seen or replayed, right on the seek bar, with a chip to resume or jump to what you haven’t seen." on={db.settings.replayMap} disabled={sample} onChange={(v) => update({ replayMap: v })} />
+          <Toggle label="Tell me when there’s a new version" detail={`You have TubeStat ${currentVersion()}. Twice a day TubeStat asks GitHub for the latest release number, and shows a notice if there’s a newer one. Copies from the Chrome Web Store are updated by Chrome and skip this.`} on={db.settings.checkUpdates} disabled={sample} onChange={(v) => update({ checkUpdates: v })} />
         </div>
       </Section>
 
       <Section title="Add more history" className="mt-16">
         <div className="max-w-2xl space-y-12">
+          <OtherDevicesSource lastSync={db.meta.lastHistorySync} count={s.otherDeviceVideos} on={db.settings.syncHistoryPage} disabled={sample} onChange={(v) => update({ syncHistoryPage: v })} />
           <SubscriptionsSource lastSync={db.meta.lastSubscriptionSync} count={subs.length} />
           <ApiSource disabled={sample} clientId={db.settings.googleClientId} lastSync={db.meta.lastApiSync} onSaveClientId={(id) => update({ googleClientId: id })} watchedChannelIds={Object.keys(db.channels)} />
           <TakeoutSource disabled={sample} importedAt={db.meta.takeoutImportedAt} />
@@ -70,13 +73,13 @@ export function Profile() {
       <Section title="Privacy" className="mt-16">
         <div className="max-w-2xl space-y-6 text-[15px] leading-relaxed">
           <Privacy q="What TubeStat records">
-            For each video you play on youtube.com in this browser: its ID, title, channel, length, YouTube’s category for it, whether it’s a Short, when you watched, how long it actually played, and how much of it you covered. For channels you visit: name, handle, avatar, and public subscriber count. For your subscriptions: which channels, and a date if YouTube provides one. Nothing else: no searches, comments, recommendations, or other sites.
+            For each video you play on youtube.com in this browser, and each one listed when you open your YouTube history page: its ID, title, channel, length, YouTube’s category for it, whether it’s a Short, when you watched, how long it actually played, and how much of it you covered. For channels you visit: name, handle, avatar, and public subscriber count. For your subscriptions: which channels, and a date if YouTube provides one. Nothing else: no searches, comments, recommendations, or other sites.
           </Privacy>
           <Privacy q="Where it’s stored">
             In Chrome’s extension storage on this device. TubeStat has no server and no account. Your data isn’t synced to other devices.
           </Privacy>
           <Privacy q="Does anything leave your device?">
-            No viewing data ever leaves your device. TubeStat only makes network requests to load YouTube thumbnails and avatars, and, if you connect it, to read your subscriptions from the YouTube Data API. That connection is read-only and the access token is kept in memory, never saved.
+            No viewing data ever leaves your device. TubeStat only makes network requests to load YouTube thumbnails and avatars, to ask GitHub for the latest version number (unless you turn that off above), and, if you connect it, to read your subscriptions from the YouTube Data API. That connection is read-only and the access token is kept in memory, never saved.
           </Privacy>
           <Privacy q="What friends see">
             Only what’s in your stat code, and only if you send it: your name, this week’s watch time, video count, creator count, and streaks. Never titles, channels, or history.
@@ -155,6 +158,23 @@ function SourceHeader({ title, status }: { title: string; status: React.ReactNod
     <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
       <h3 className="text-[16px] text-paper">{title}</h3>
       <span className="text-[13px] text-dim">{status}</span>
+    </div>
+  );
+}
+
+function OtherDevicesSource({ lastSync, count, on, disabled, onChange }: { lastSync: number | null; count: number; on: boolean; disabled?: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div>
+      <SourceHeader title="Your phone and other devices" status={lastSync ? `${count.toLocaleString()} videos, read ${formatSpan(Date.now() - lastSync)} ago`.replace('today ago', 'today') : 'Not read yet'} />
+      <p className="text-[14px] leading-relaxed text-dim">
+        TubeStat can’t see the YouTube app on your phone, but your YouTube history can: it lists what you watched on every device signed in to your account. Open it on this computer and scroll back as far as you want to bring in. TubeStat adds each video on the day YouTube lists it, skips anything it already recorded here, and estimates watch time from how far the red bar under the thumbnail reaches. Shorts count as videos, but YouTube doesn’t show how long you watched them, so they don’t add hours.
+      </p>
+      <a href="https://www.youtube.com/feed/history" target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-lg border border-line-strong px-4 py-2 text-[14px] hover:bg-raise-2">
+        Open YouTube history
+      </a>
+      <div className="mt-2 max-w-2xl">
+        <Toggle label="Read my YouTube history page when I open it" detail="Only when you visit youtube.com/feed/history yourself. YouTube history has to be turned on in your Google account." on={on} disabled={disabled} onChange={onChange} />
+      </div>
     </div>
   );
 }

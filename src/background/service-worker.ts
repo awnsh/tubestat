@@ -6,13 +6,19 @@ import { handleMessage } from '../storage/mutations';
 import { kvGet, kvSet } from '../storage/kv';
 import { newMeta } from '../storage/db';
 import type { TrackerMessage } from '../storage/schema';
+import { checkForUpdate } from '../update/check';
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (!(await kvGet('meta'))) await kvSet({ meta: newMeta() });
   if (details.reason === 'install') {
     chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html#/welcome') });
   }
+  // Re-check right after an update so a stale "new version" notice clears.
+  checkForUpdate({ force: true });
 });
+
+// The worker wakes often while you watch YouTube; the check itself is throttled.
+checkForUpdate();
 
 chrome.runtime.onMessage.addListener((msg: TrackerMessage, sender, sendResponse) => {
   // Only accept messages from this extension's own scripts and pages.

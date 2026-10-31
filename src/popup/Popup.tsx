@@ -2,8 +2,9 @@ import { useMemo } from 'react';
 import { useDatabaseState } from '../hooks/useDatabase';
 import { elapsedComparable, previousRange, rangeFor } from '../analytics/periods';
 import { formatDuration } from '../lib/format';
-import { Avatar, Change, Duration, Scrubber, TestStrip } from '../components/ui';
+import { Avatar, Change, Duration, FormatSplit, Scrubber, TestStrip } from '../components/ui';
 import { categoryColor } from '../lib/colors';
+import { UpdateNotice } from '../components/UpdateNotice';
 
 /** A glance, not a dashboard: this week, top creator, top category. */
 export function Popup() {
@@ -49,6 +50,7 @@ export function Popup() {
           <span>this week, {s.videos} videos</span>
           <Change value={change} />
         </div>
+        {s.shorts ? <FormatSplit compact className="mt-4" longSeconds={s.longSeconds} shortSeconds={s.shortSeconds} longCount={s.longform} shortCount={s.shorts} /> : null}
       </div>
 
       <div className="mt-6 space-y-5 border-t border-line pt-5">
@@ -78,6 +80,7 @@ export function Popup() {
         ) : null}
       </div>
 
+      {!sample ? <UpdateNotice compact className="mt-6" /> : null}
       <button onClick={() => open()} className="mt-6 w-full rounded-lg bg-paper py-2.5 text-[14px] font-medium text-ink hover:bg-white">
         Open dashboard
       </button>

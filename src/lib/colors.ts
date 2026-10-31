@@ -26,6 +26,9 @@ export const CATEGORY_COLOR: Record<Category, string> = {
 
 export const categoryColor = (c: Category | string | null | undefined) => CATEGORY_COLOR[c as Category] ?? 'var(--color-cat-other)';
 
+/** Long-form keeps the play red; Shorts get their own hue wherever the two are split. */
+export const FORMAT_COLOR = { long: 'var(--color-play)', shorts: 'var(--color-cat-cyan)' } as const;
+
 /** Badge colours: the earlier you were, the hotter the badge. */
 export const TIER_STYLE: Record<OgTier, { bg: string; fg: string } | null> = {
   'DAY ONE': { bg: 'var(--color-bar-red)', fg: '#fff' },

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useData } from '../hooks/useDatabase';
 import { href } from '../hooks/useRoute';
 import { rangeFor, type PeriodKind } from '../analytics/periods';
-import type { CreatorMetric, CreatorStat } from '../analytics/engine';
+import { FORMATS, type CreatorMetric, type CreatorStat, type Format } from '../analytics/engine';
 import { computeOg } from '../analytics/og';
 import { formatAudienceShare, formatDuration } from '../lib/format';
 import { PageTitle } from '../components/Shell';
@@ -32,14 +32,20 @@ function metricValue(c: CreatorStat, m: CreatorMetric) {
 }
 
 export function Creators() {
-  const { analytics: a, db } = useData();
+  const { analytics: all, db } = useData();
   const [metric, setMetric] = useState<CreatorMetric>('time');
   const [kind, setKind] = useState<PeriodKind>('all');
-  const range = useMemo(() => rangeFor(kind, Date.now(), a.firstDataAt ?? Date.now()), [kind, a]);
+  const [format, setFormat] = useState<Format>('all');
+  const a = all.forFormat(format);
+  const range = useMemo(() => rangeFor(kind, Date.now(), all.firstDataAt ?? Date.now()), [kind, all]);
   const list = useMemo(() => a.topCreators(range, metric, 100), [a, range, metric]);
   const [first, ...rest] = list;
   const max = first ? metricValue(first, metric) : 1;
-  const second = (c: CreatorStat) => (metric === 'time' ? `${c.videos.toLocaleString()} videos` : formatDuration(c.watchSeconds));
+  const second = (c: CreatorStat) => {
+    const base = metric === 'time' ? `${c.videos.toLocaleString()} videos` : formatDuration(c.watchSeconds);
+    // In the mixed view, say how much of a creator's count is Shorts.
+    return format === 'all' && c.shorts ? `${base}, ${c.shorts === c.videos ? 'all Shorts' : c.shorts === 1 ? '1 Short' : `${c.shorts.toLocaleString()} Shorts`}` : base;
+  };
 
   return (
     <>
@@ -47,10 +53,11 @@ export function Creators() {
       <div className="mb-10 flex flex-wrap gap-3">
         <Segmented label="Rank by" options={METRICS} value={metric} onChange={setMetric} />
         <Segmented label="Time period" options={PERIODS} value={kind} onChange={setKind} />
+        <Segmented label="Format" options={FORMATS} value={format} onChange={setFormat} />
       </div>
 
       {!first ? (
-        <Empty title="No creators in this period">Creators appear here as soon as you watch something.</Empty>
+        <Empty title={format === 'all' ? 'No creators in this period' : `No ${format === 'shorts' ? 'Shorts' : 'long-form videos'} in this period`}>Creators appear here as soon as you watch something.</Empty>
       ) : (
         <>
           <a href={href('creators', first.channelId)} className="enter group mb-10 flex items-center gap-6 border-b border-line pb-10">
