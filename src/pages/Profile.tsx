@@ -5,7 +5,7 @@ import { isExtension, kvBytesInUse } from '../storage/kv';
 import type { Settings } from '../storage/schema';
 import { dispatch } from '../lib/dispatch';
 import { parseTakeout } from '../youtube/takeout';
-import { authorize, fetchApiSync, redirectUri, requestApiPermissions } from '../youtube/api';
+import { authorize, fetchApiSync, hasBuiltInClient, redirectUri, requestApiPermissions } from '../youtube/api';
 import { formatDate, formatDuration, formatSpan } from '../lib/format';
 import { rangeFor } from '../analytics/periods';
 import { PageTitle } from '../components/Shell';
@@ -197,7 +197,11 @@ function ApiSource({ clientId, lastSync, onSaveClientId, watchedChannelIds, disa
   const [id, setId] = useState(clientId);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const builtIn = hasBuiltInClient();
+  // With TubeStat's own sign-in, a custom client ID is an advanced option; without it, it's the only way.
   const [open, setOpen] = useState(false);
+  const [custom, setCustom] = useState(!builtIn || !!clientId);
+  const useOwn = custom && id.trim();
 
   const run = async () => {
     // Ask for the optional permissions first, while we're still inside the click.
@@ -206,9 +210,10 @@ function ApiSource({ clientId, lastSync, onSaveClientId, watchedChannelIds, disa
     setStatus(null);
     try {
       if (!(await permission)) throw new Error('TubeStat needs permission to read your subscriptions from Google. Nothing was changed.');
-      if (id !== clientId) await onSaveClientId(id.trim());
+      const chosen = useOwn ? id.trim() : '';
+      if (chosen !== clientId) await onSaveClientId(chosen);
       setStatus({ ok: true, text: 'Waiting for Google…' });
-      const token = await authorize(id);
+      const token = await authorize(chosen);
       const payload = await fetchApiSync(token, watchedChannelIds, (t) => setStatus({ ok: true, text: t }));
       await dispatch({ type: 'api:apply', payload });
       setStatus({ ok: true, text: `Done. ${payload.subscriptions.length} subscriptions with dates, ${payload.channels.length} channels updated.` });
@@ -223,12 +228,25 @@ function ApiSource({ clientId, lastSync, onSaveClientId, watchedChannelIds, disa
     <div>
       <SourceHeader title="Subscription dates from your YouTube account" status={lastSync ? `Last synced ${formatDate(lastSync)}` : 'Optional'} />
       <p className="text-[14px] leading-relaxed text-dim">
-        The only place YouTube records <em>when</em> you subscribed is its Data API. Connecting gives TubeStat those dates and each channel’s creation date, which power “Subscribed for” and OG status for subscriptions older than TubeStat. It’s read-only and runs only when you press the button.
+        The only place YouTube records <em>when</em> you subscribed is its Data API. Connecting gives TubeStat those dates and each channel’s creation date, which power “Subscribed for” and OG status for subscriptions older than TubeStat. It’s read-only, and the access is used once and thrown away.
+        {builtIn ? ' After the first time, TubeStat refreshes the dates about once a week while you’re signed in to Google, without asking again. You can remove its access any time in your Google account.' : ''}
       </p>
-      <button onClick={() => setOpen((v) => !v)} className="mt-3 text-[13px] text-paper underline-offset-4 hover:underline" aria-expanded={open}>
-        {open ? 'Hide setup steps' : 'Setup steps (about 5 minutes, once)'}
-      </button>
-      {open ? (
+      {builtIn && !custom ? (
+        <div className="mt-4 flex flex-wrap items-center gap-4">
+          <Button variant="primary" onClick={run} disabled={disabled || busy || !isExtension}>
+            {busy ? 'Syncing…' : lastSync ? 'Sync again' : 'Connect with Google'}
+          </Button>
+          <button onClick={() => setCustom(true)} className="text-[13px] text-dim underline-offset-4 hover:text-paper hover:underline">
+            Use my own client ID instead
+          </button>
+        </div>
+      ) : null}
+      {custom ? (
+        <button onClick={() => setOpen((v) => !v)} className="mt-3 text-[13px] text-paper underline-offset-4 hover:underline" aria-expanded={open}>
+          {open ? 'Hide setup steps' : 'Setup steps (about 5 minutes, once)'}
+        </button>
+      ) : null}
+      {custom && open ? (
         <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-[13px] leading-relaxed text-dim">
           <li>In Google Cloud Console, create a project and enable “YouTube Data API v3”.</li>
           <li>Configure the OAuth consent screen (External, add yourself as a test user).</li>
@@ -239,13 +257,18 @@ function ApiSource({ clientId, lastSync, onSaveClientId, watchedChannelIds, disa
           <li>Paste the client ID below and press Connect.</li>
         </ol>
       ) : null}
-      <div className="mt-4 flex max-w-xl gap-2">
-        <label htmlFor="client-id" className="sr-only">OAuth client ID</label>
-        <input id="client-id" disabled={disabled} value={id} onChange={(e) => setId(e.target.value)} placeholder="OAuth client ID (…apps.googleusercontent.com)" className="min-w-0 flex-1 rounded-lg border border-line-strong bg-transparent px-3 py-2 text-[13px] placeholder:text-faint focus:border-paper/40 focus:outline-none disabled:opacity-40" />
-        <Button onClick={run} disabled={disabled || busy || !id.trim().endsWith('.apps.googleusercontent.com') || !isExtension}>
-          {busy ? 'Syncing…' : lastSync ? 'Sync again' : 'Connect'}
-        </Button>
-      </div>
+      {custom ? (
+        <div className="mt-4 flex max-w-xl gap-2">
+          <label htmlFor="client-id" className="sr-only">OAuth client ID</label>
+          <input id="client-id" disabled={disabled} value={id} onChange={(e) => setId(e.target.value)} placeholder="OAuth client ID (…apps.googleusercontent.com)" className="min-w-0 flex-1 rounded-lg border border-line-strong bg-transparent px-3 py-2 text-[13px] placeholder:text-faint focus:border-paper/40 focus:outline-none disabled:opacity-40" />
+          <Button onClick={run} disabled={disabled || busy || !id.trim().endsWith('.apps.googleusercontent.com') || !isExtension}>
+            {busy ? 'Syncing…' : lastSync ? 'Sync again' : 'Connect'}
+          </Button>
+          {builtIn ? (
+            <Button onClick={() => { setCustom(false); setId(''); }} disabled={busy}>Cancel</Button>
+          ) : null}
+        </div>
+      ) : null}
       {status ? <p className={cx('mt-2 text-[13px]', status.ok ? 'text-dim' : 'text-play')} role="status">{status.text}</p> : null}
     </div>
   );

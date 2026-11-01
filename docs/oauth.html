@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Connecting TubeStat</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #111113; color: #a19f9a; font: 400 16px/1.6 system-ui, sans-serif; }
+  </style>
+  <!--
+    Google sends you here after you allow TubeStat to read your subscriptions.
+    Every unpacked copy of TubeStat has a different extension ID, so Google
+    can't send you straight back to it. This page passes Google's answer on to
+    the copy that asked (named in `state`), at https://<id>.chromiumapp.org/,
+    the address Chrome hands back to that extension. The answer sits in the
+    URL fragment, which browsers never send to any server, and nothing on this
+    page stores or sends it anywhere else.
+  -->
+  <script>
+    (function () {
+      var hash = location.hash.slice(1);
+      var query = location.search.slice(1);
+      var params = new URLSearchParams(hash || query);
+      var id = (params.get('state') || '').split('.')[0];
+      if (/^[a-p]{32}$/.test(id)) {
+        location.replace('https://' + id + '.chromiumapp.org/#' + (hash || query));
+      } else {
+        document.addEventListener('DOMContentLoaded', function () {
+          document.getElementById('msg').textContent = 'This page only works when TubeStat opens it. Go back to TubeStat and press Connect again.';
+        });
+      }
+    })();
+  </script>
+</head>
+<body>
+  <p id="msg">Returning to TubeStat…</p>
+</body>
+</html>
