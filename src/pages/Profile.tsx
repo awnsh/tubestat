@@ -114,8 +114,12 @@ export function Profile() {
           >
             Export everything (JSON)
           </Button>
+          <ImportBackup disabled={sample} onDone={reload} />
           <Button onClick={() => setSample(!sample)}>{sample ? 'Hide sample data' : 'Preview with sample data'}</Button>
         </div>
+        <p className="mt-3 max-w-2xl text-[13px] text-dim">
+          Moving to a new copy of TubeStat? Export here, then use “Import a TubeStat export” in the new copy. Importing adds to what’s already there and never overwrites it.
+        </p>
         <DeleteAll disabled={sample} onDone={reload} accountClientId={account ? account.clientId : null} />
       </Section>
     </>
@@ -272,6 +276,34 @@ function TakeoutSource({ importedAt, disabled }: { importedAt: number | null; di
       {status ? <p className={cx('mt-2 text-[13px]', status.ok ? 'text-dim' : 'text-play')} role="status">{status.text}</p> : null}
       <Provenance>The file is read on this device. Nothing is uploaded.</Provenance>
     </div>
+  );
+}
+
+function ImportBackup({ disabled, onDone }: { disabled?: boolean; onDone: () => void }) {
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const onFile = async (file: File) => {
+    setBusy(true);
+    setStatus({ ok: true, text: 'Importing…' });
+    try {
+      const r = await dispatch<{ added: number; total: number }>({ type: 'data:import', json: await file.text() });
+      if (!r) throw new Error('Importing only works inside the extension.');
+      setStatus({ ok: true, text: r.added ? `Imported ${r.added.toLocaleString()} viewings. You now have ${r.total.toLocaleString()}.` : `Everything in that file was already here (${r.total.toLocaleString()} viewings).` });
+      onDone();
+    } catch (e) {
+      setStatus({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <label className={cx('inline-flex cursor-pointer items-center justify-center rounded-lg border border-line-strong px-4 py-2 text-[14px] font-medium text-paper hover:bg-raise-2', (disabled || busy) && 'pointer-events-none opacity-40')}>
+        {busy ? 'Importing…' : 'Import a TubeStat export'}
+        <input type="file" accept="application/json,.json" className="sr-only" disabled={disabled || busy} onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
+      </label>
+      {status ? <p className={cx('basis-full text-[13px]', status.ok ? 'text-dim' : 'text-play')} role="status">{status.text}</p> : null}
+    </>
   );
 }
 

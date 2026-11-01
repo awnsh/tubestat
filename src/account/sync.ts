@@ -133,6 +133,47 @@ async function mergeIntoLocal(fetched: Record<string, unknown>): Promise<Record<
   });
 }
 
+/**
+ * Merges a file from Profile → "Export everything" into this device, the same
+ * way a sync merges another device's data: nothing here is overwritten or lost.
+ * Used to move to a new copy of TubeStat.
+ */
+export async function importBackup(json: string): Promise<{ added: number; total: number }> {
+  let parsed: { app?: string; data?: Record<string, unknown> };
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error('That file isn’t valid JSON. Choose the file TubeStat saved from “Export everything”.');
+  }
+  const data = parsed?.data;
+  if (parsed?.app !== 'tubestat' || !data || typeof data !== 'object') throw new Error('That isn’t a TubeStat export. Choose the file TubeStat saved from “Export everything”.');
+
+  const fetched: Record<string, unknown> = {};
+  const replays: Record<string, ReplayHeat> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (key.startsWith(WATCH_SHARD_PREFIX) && value) fetched[shardFile(key)] = value;
+    else if (key.startsWith(HEAT_PREFIX) && value) replays[key.slice(HEAT_PREFIX.length)] = value as ReplayHeat;
+  }
+  fetched[REPLAYS] = replays;
+  const meta = { ...newMeta(), ...((data.meta as Meta) ?? {}) };
+  fetched[CORE] = {
+    v: 1,
+    channels: (data.channels as Record<string, Channel>) ?? {},
+    subscriptions: (data.subscriptions as Record<string, Subscription>) ?? {},
+    groups: (data.groups as FriendGroup[]) ?? [],
+    memberId: (data.memberId as string) ?? '',
+    displayName: (data.settings as Settings | undefined)?.displayName ?? '',
+    meta,
+  } satisfies CoreFile;
+
+  const count = (files: Record<string, unknown>) => Object.entries(files).filter(([n]) => isShardFile(n)).reduce((s, [, v]) => s + Object.keys(v as object).length, 0);
+  const before = (await kvGetAll()) as Record<string, unknown>;
+  const had = Object.entries(before).filter(([k]) => k.startsWith(WATCH_SHARD_PREFIX)).reduce((s, [, v]) => s + Object.keys((v as object) ?? {}).length, 0);
+  const files = await mergeIntoLocal(fetched);
+  const total = count(files);
+  return { added: Math.max(0, total - had), total };
+}
+
 /** Two-way sync with the Drive app folder. Returns how many files went each way. */
 export async function syncData(token: string): Promise<{ downloaded: number; uploaded: number }> {
   const state: SyncState = (await kvGet<SyncState>('syncState')) ?? {};

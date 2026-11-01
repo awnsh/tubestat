@@ -7,7 +7,7 @@ import { kvGet, kvSet } from '../storage/kv';
 import { newMeta } from '../storage/db';
 import type { TrackerMessage } from '../storage/schema';
 import { checkForUpdate } from '../update/check';
-import { signOut, syncAll, syncInBackground } from '../account/sync';
+import { importBackup, signOut, syncAll, syncInBackground } from '../account/sync';
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (!(await kvGet('meta'))) await kvSet({ meta: newMeta() });
@@ -25,6 +25,7 @@ syncInBackground();
 function handle(msg: TrackerMessage): Promise<unknown> {
   if (msg.type === 'account:sync') return syncAll(msg.token, msg.user, msg.clientId);
   if (msg.type === 'account:signOut') return signOut(msg.token);
+  if (msg.type === 'data:import') return importBackup(msg.json);
   return handleMessage(msg);
 }
 

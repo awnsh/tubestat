@@ -209,6 +209,8 @@ export type TrackerMessage =
   | { type: 'account:sync'; token: string; user?: GoogleUser; clientId?: string }
   /** With a token, also deletes the copy in your Google account. */
   | { type: 'account:signOut'; token?: string }
+  /** The text of a file from "Export everything", merged in. */
+  | { type: 'data:import'; json: string }
   | { type: 'api:apply'; payload: ApiSyncPayload }
   | { type: 'data:deleteAll' }
   | { type: 'tracker:ping' };
