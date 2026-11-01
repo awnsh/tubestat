@@ -30,9 +30,9 @@ const SCOPES = [
 /**
  * TubeStat's own OAuth client ("Web application" type, in the developer's Google
  * Cloud project). Not a secret: it only identifies the app on Google's sign-in
- * page. Empty until that project exists; sign-in then needs a client ID in Profile.
+ * page. Lives in the "TubeStat" Google Cloud project (tubestat-513321).
  */
-export const BUILT_IN_CLIENT_ID = '';
+export const BUILT_IN_CLIENT_ID = '12935157886-31qn2bpbnfiaha3fsqlkflmugmoijqf5.apps.googleusercontent.com';
 const RELAY_REDIRECT = 'https://awnsh.github.io/tubestat/oauth.html';
 
 export const hasBuiltInClient = () => BUILT_IN_CLIENT_ID.endsWith('.apps.googleusercontent.com');
