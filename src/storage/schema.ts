@@ -18,6 +18,7 @@
 
 import type { HeatDelta, ReplayHeat } from '../replay/heat';
 import type { HistoryItem } from '../youtube/bridge-protocol';
+import type { GoogleUser } from '../account/google';
 
 export const SCHEMA_VERSION = 1;
 
@@ -204,6 +205,10 @@ export type TrackerMessage =
     }
   | { type: 'takeout:import'; watches: Watch[]; channels: Array<{ channelId: string; channelName: string }> }
   | { type: 'history:import'; items: HistoryItem[] }
+  /** Sign-in or "Sync now": the page got a token from Google and hands it over for this one sync. */
+  | { type: 'account:sync'; token: string; user?: GoogleUser; clientId?: string }
+  /** With a token, also deletes the copy in your Google account. */
+  | { type: 'account:signOut'; token?: string }
   | { type: 'api:apply'; payload: ApiSyncPayload }
   | { type: 'data:deleteAll' }
   | { type: 'tracker:ping' };

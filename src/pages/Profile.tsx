@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../hooks/useDatabase';
 import { exportAll, saveSettings } from '../storage/db';
-import { isExtension, kvBytesInUse } from '../storage/kv';
+import { kvBytesInUse } from '../storage/kv';
 import type { Settings } from '../storage/schema';
 import { dispatch } from '../lib/dispatch';
 import { parseTakeout } from '../youtube/takeout';
-import { authorize, fetchApiSync, hasBuiltInClient, redirectUri, requestApiPermissions } from '../youtube/api';
+import { authorize, hasBuiltInClient, redirectUri } from '../account/google';
+import { AccountSection, useAccount } from '../components/Account';
 import { formatDate, formatDuration, formatSpan } from '../lib/format';
 import { rangeFor } from '../analytics/periods';
 import { PageTitle } from '../components/Shell';
@@ -17,6 +18,7 @@ export function Profile() {
   const all = rangeFor('all', Date.now(), a.firstDataAt ?? Date.now());
   const s = useMemo(() => a.summary(all), [a]);
   const subs = Object.values(db.subscriptions).filter((x) => x.active);
+  const account = useAccount();
   const [bytes, setBytes] = useState<number | null>(null);
   useEffect(() => {
     kvBytesInUse().then(setBytes);
@@ -38,6 +40,12 @@ export function Profile() {
         <Big label="creators" value={s.creators.toLocaleString()} />
         <Big label="subscriptions known" value={subs.length.toLocaleString()} />
       </dl>
+
+      <div id="account" className="scroll-mt-8">
+        <Section title="Your account" className="mt-16">
+          <AccountSection clientId={db.settings.googleClientId} disabled={sample} />
+        </Section>
+      </div>
 
       <Section title="You" className="mt-16">
         <label htmlFor="display-name" className="text-[13px] text-dim">Name shown to friends on leaderboards</label>
@@ -65,7 +73,7 @@ export function Profile() {
         <div className="max-w-2xl space-y-12">
           <OtherDevicesSource lastSync={db.meta.lastHistorySync} count={s.otherDeviceVideos} on={db.settings.syncHistoryPage} disabled={sample} onChange={(v) => update({ syncHistoryPage: v })} />
           <SubscriptionsSource lastSync={db.meta.lastSubscriptionSync} count={subs.length} />
-          <ApiSource disabled={sample} clientId={db.settings.googleClientId} lastSync={db.meta.lastApiSync} onSaveClientId={(id) => update({ googleClientId: id })} watchedChannelIds={Object.keys(db.channels)} />
+          <SubscriptionDates disabled={sample} signedIn={!!account} clientId={db.settings.googleClientId} lastSync={db.meta.lastApiSync} onSaveClientId={(id) => update({ googleClientId: id })} />
           <TakeoutSource disabled={sample} importedAt={db.meta.takeoutImportedAt} />
         </div>
       </Section>
@@ -76,16 +84,16 @@ export function Profile() {
             For each video you play on youtube.com in this browser, and each one listed when you open your YouTube history page: its ID, title, channel, length, YouTube’s category for it, whether it’s a Short, when you watched, how long it actually played, and how much of it you covered. For channels you visit: name, handle, avatar, and public subscriber count. For your subscriptions: which channels, and a date if YouTube provides one. Nothing else: no searches, comments, recommendations, or other sites.
           </Privacy>
           <Privacy q="Where it’s stored">
-            In Chrome’s extension storage on this device. TubeStat has no server and no account. Your data isn’t synced to other devices.
+            In Chrome’s extension storage on this device. If you sign in with Google, also in a private app folder in your own Google Drive, which only TubeStat can open and which doesn’t appear in your Drive files. TubeStat has no server of its own.
           </Privacy>
           <Privacy q="Does anything leave your device?">
-            No viewing data ever leaves your device. TubeStat only makes network requests to load YouTube thumbnails and avatars, to ask GitHub for the latest version number (unless you turn that off above), and, if you connect it, to read your subscriptions from the YouTube Data API. That connection is read-only and the access token is kept in memory, never saved.
+            Not unless you sign in. Signed out, TubeStat only makes network requests to load YouTube thumbnails and avatars and to ask GitHub for the latest version number (unless you turn that off above). Signed in, your stats also go to your own Google Drive app folder, and TubeStat reads your subscriptions from YouTube, read-only. Google sign-in tokens are kept in memory and never saved; only your account’s email and name are.
           </Privacy>
           <Privacy q="What friends see">
             Only what’s in your stat code, and only if you send it: your name, this week’s watch time, video count, creator count, and streaks. Never titles, channels, or history.
           </Privacy>
           <Privacy q="Deleting your data">
-            Use “Delete everything” below, or remove the extension. Both erase all of it immediately.
+            Use “Delete everything” below, which also deletes the copy in your Google account if you’re signed in. Removing the extension erases this device’s copy only. You can also remove TubeStat’s access in your Google account settings.
           </Privacy>
         </div>
       </Section>
@@ -108,7 +116,7 @@ export function Profile() {
           </Button>
           <Button onClick={() => setSample(!sample)}>{sample ? 'Hide sample data' : 'Preview with sample data'}</Button>
         </div>
-        <DeleteAll disabled={sample} onDone={reload} />
+        <DeleteAll disabled={sample} onDone={reload} accountClientId={account ? account.clientId : null} />
       </Section>
     </>
   );
@@ -193,83 +201,37 @@ function SubscriptionsSource({ lastSync, count }: { lastSync: number | null; cou
   );
 }
 
-function ApiSource({ clientId, lastSync, onSaveClientId, watchedChannelIds, disabled }: { clientId: string; lastSync: number | null; onSaveClientId: (id: string) => Promise<void>; watchedChannelIds: string[]; disabled?: boolean }) {
+function SubscriptionDates({ signedIn, lastSync, clientId, onSaveClientId, disabled }: { signedIn: boolean; lastSync: number | null; clientId: string; onSaveClientId: (id: string) => Promise<void>; disabled?: boolean }) {
+  const [dev, setDev] = useState(!!clientId);
   const [id, setId] = useState(clientId);
-  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const builtIn = hasBuiltInClient();
-  // With TubeStat's own sign-in, a custom client ID is an advanced option; without it, it's the only way.
-  const [open, setOpen] = useState(false);
-  const [custom, setCustom] = useState(!builtIn || !!clientId);
-  const useOwn = custom && id.trim();
-
-  const run = async () => {
-    // Ask for the optional permissions first, while we're still inside the click.
-    const permission = requestApiPermissions();
-    setBusy(true);
-    setStatus(null);
-    try {
-      if (!(await permission)) throw new Error('TubeStat needs permission to read your subscriptions from Google. Nothing was changed.');
-      const chosen = useOwn ? id.trim() : '';
-      if (chosen !== clientId) await onSaveClientId(chosen);
-      setStatus({ ok: true, text: 'Waiting for Google…' });
-      const token = await authorize(chosen);
-      const payload = await fetchApiSync(token, watchedChannelIds, (t) => setStatus({ ok: true, text: t }));
-      await dispatch({ type: 'api:apply', payload });
-      setStatus({ ok: true, text: `Done. ${payload.subscriptions.length} subscriptions with dates, ${payload.channels.length} channels updated.` });
-    } catch (e) {
-      setStatus({ ok: false, text: (e as Error).message });
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <div>
-      <SourceHeader title="Subscription dates from your YouTube account" status={lastSync ? `Last synced ${formatDate(lastSync)}` : 'Optional'} />
+      <SourceHeader title="Subscription dates from your YouTube account" status={lastSync ? `Last read ${formatDate(lastSync)}` : signedIn ? 'Reading…' : 'Needs sign-in'} />
       <p className="text-[14px] leading-relaxed text-dim">
-        The only place YouTube records <em>when</em> you subscribed is its Data API. Connecting gives TubeStat those dates and each channel’s creation date, which power “Subscribed for” and OG status for subscriptions older than TubeStat. It’s read-only, and the access is used once and thrown away.
-        {builtIn ? ' After the first time, TubeStat refreshes the dates about once a week while you’re signed in to Google, without asking again. You can remove its access any time in your Google account.' : ''}
+        YouTube only tells your own account <em>when</em> you subscribed. {signedIn ? 'Because you’re signed in with Google, TubeStat reads those dates, and each channel’s creation date, about once a week.' : 'Sign in with Google at the top of this page and TubeStat reads those dates, and each channel’s creation date, about once a week.'} They power “Subscribed for” and OG status for subscriptions older than TubeStat. Read-only: TubeStat can’t change anything on your YouTube account.
       </p>
-      {builtIn && !custom ? (
-        <div className="mt-4 flex flex-wrap items-center gap-4">
-          <Button variant="primary" onClick={run} disabled={disabled || busy || !isExtension}>
-            {busy ? 'Syncing…' : lastSync ? 'Sync again' : 'Connect with Google'}
-          </Button>
-          <button onClick={() => setCustom(true)} className="text-[13px] text-dim underline-offset-4 hover:text-paper hover:underline">
-            Use my own client ID instead
-          </button>
-        </div>
+      {!signedIn ? (
+        <Button className="mt-4" disabled={disabled} onClick={() => document.getElementById('account')?.scrollIntoView({ behavior: 'smooth' })}>
+          Go to sign-in
+        </Button>
       ) : null}
-      {custom ? (
-        <button onClick={() => setOpen((v) => !v)} className="mt-3 text-[13px] text-paper underline-offset-4 hover:underline" aria-expanded={open}>
-          {open ? 'Hide setup steps' : 'Setup steps (about 5 minutes, once)'}
-        </button>
+      {!hasBuiltInClient() || dev ? (
+        <details className="mt-5 text-[13px] text-dim" open={dev}>
+          <summary className="cursor-pointer text-faint hover:text-paper">For developers: use your own OAuth client</summary>
+          <ol className="mt-3 list-decimal space-y-1.5 pl-5 leading-relaxed">
+            <li>In Google Cloud Console, enable “YouTube Data API v3” and “Google Drive API”.</li>
+            <li>Create an OAuth client ID of type “Web application”, with this redirect URI: <code className="break-all rounded bg-raise-2 px-1.5 py-0.5 text-paper">{redirectUri()}</code></li>
+            <li>Save the client ID here, then use Sign in with Google above.</li>
+          </ol>
+          <div className="mt-3 flex max-w-xl gap-2">
+            <label htmlFor="client-id" className="sr-only">OAuth client ID</label>
+            <input id="client-id" disabled={disabled} value={id} onChange={(e) => setId(e.target.value)} placeholder="…apps.googleusercontent.com" className="min-w-0 flex-1 rounded-lg border border-line-strong bg-transparent px-3 py-2 text-[13px] placeholder:text-faint focus:border-paper/40 focus:outline-none disabled:opacity-40" />
+            <Button disabled={disabled || (!!id.trim() && !id.trim().endsWith('.apps.googleusercontent.com')) || id.trim() === clientId} onClick={() => onSaveClientId(id.trim()).then(() => setDev(!!id.trim()))}>
+              Save
+            </Button>
+          </div>
+        </details>
       ) : null}
-      {custom && open ? (
-        <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-[13px] leading-relaxed text-dim">
-          <li>In Google Cloud Console, create a project and enable “YouTube Data API v3”.</li>
-          <li>Configure the OAuth consent screen (External, add yourself as a test user).</li>
-          <li>Create an OAuth client ID of type “Web application”.</li>
-          <li>
-            Add this authorised redirect URI: <code className="break-all rounded bg-raise-2 px-1.5 py-0.5 text-paper">{redirectUri()}</code>
-          </li>
-          <li>Paste the client ID below and press Connect.</li>
-        </ol>
-      ) : null}
-      {custom ? (
-        <div className="mt-4 flex max-w-xl gap-2">
-          <label htmlFor="client-id" className="sr-only">OAuth client ID</label>
-          <input id="client-id" disabled={disabled} value={id} onChange={(e) => setId(e.target.value)} placeholder="OAuth client ID (…apps.googleusercontent.com)" className="min-w-0 flex-1 rounded-lg border border-line-strong bg-transparent px-3 py-2 text-[13px] placeholder:text-faint focus:border-paper/40 focus:outline-none disabled:opacity-40" />
-          <Button onClick={run} disabled={disabled || busy || !id.trim().endsWith('.apps.googleusercontent.com') || !isExtension}>
-            {busy ? 'Syncing…' : lastSync ? 'Sync again' : 'Connect'}
-          </Button>
-          {builtIn ? (
-            <Button onClick={() => { setCustom(false); setId(''); }} disabled={busy}>Cancel</Button>
-          ) : null}
-        </div>
-      ) : null}
-      {status ? <p className={cx('mt-2 text-[13px]', status.ok ? 'text-dim' : 'text-play')} role="status">{status.text}</p> : null}
     </div>
   );
 }
@@ -313,12 +275,17 @@ function TakeoutSource({ importedAt, disabled }: { importedAt: number | null; di
   );
 }
 
-function DeleteAll({ onDone, disabled }: { onDone: () => void; disabled?: boolean }) {
+/** `accountClientId` is set (possibly to '') while signed in; then the Google copy is deleted too. */
+function DeleteAll({ onDone, disabled, accountClientId }: { onDone: () => void; disabled?: boolean; accountClientId: string | null }) {
   const [stage, setStage] = useState<'idle' | 'confirm' | 'done'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const signedIn = accountClientId != null;
   return (
     <div className="mt-10 max-w-2xl border-t border-line pt-6">
       <p className="text-[15px]">Delete everything</p>
-      <p className="mt-1 text-[13px] text-dim">Erases all viewing history, creators, subscriptions, groups, and settings from this device. This can’t be undone. Export first if you might want it back.</p>
+      <p className="mt-1 text-[13px] text-dim">
+        Erases all viewing history, creators, subscriptions, groups, and settings from this device{signedIn ? ', and the copy in your Google account, which also removes it from your other devices the next time they sync' : ''}. This can’t be undone. Export first if you might want it back.
+      </p>
       <div className="mt-4 flex gap-2">
         {stage === 'idle' ? (
           <Button variant="danger" disabled={disabled} onClick={() => setStage('confirm')}>Delete everything</Button>
@@ -327,9 +294,19 @@ function DeleteAll({ onDone, disabled }: { onDone: () => void; disabled?: boolea
             <Button
               variant="danger"
               onClick={async () => {
-                await dispatch({ type: 'data:deleteAll' });
-                setStage('done');
-                onDone();
+                setError(null);
+                try {
+                  if (signedIn) {
+                    // Delete the Google copy first, so a sync can't bring the data back.
+                    const token = await authorize(accountClientId);
+                    await dispatch({ type: 'account:signOut', token });
+                  }
+                  await dispatch({ type: 'data:deleteAll' });
+                  setStage('done');
+                  onDone();
+                } catch (e) {
+                  setError(`Nothing was deleted. ${(e as Error).message}`);
+                }
               }}
             >
               Yes, delete all my data
@@ -340,6 +317,7 @@ function DeleteAll({ onDone, disabled }: { onDone: () => void; disabled?: boolea
           <p className="text-[13px] text-dim" role="status">Deleted. TubeStat is starting fresh.</p>
         )}
       </div>
+      {error ? <p className="mt-2 text-[13px] text-play" role="status">{error}</p> : null}
     </div>
   );
 }

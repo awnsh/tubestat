@@ -17,6 +17,9 @@ function locked<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+/** Runs `fn` in the same queue as every other write (used by account sync). */
+export const withLock = locked;
+
 const dayKey = (t: number) => {
   const d = new Date(t);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

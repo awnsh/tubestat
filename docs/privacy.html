@@ -55,14 +55,14 @@
     <p>TubeStat does not record your searches, comments, likes, recommendations, messages, account details, or anything you do on any other website.</p>
 
     <h2>Where it’s stored</h2>
-    <p>Everything is kept in your browser’s extension storage on this device. It isn’t synced to other devices or to any cloud service. Uninstalling TubeStat deletes it.</p>
+    <p>Everything is kept in your browser’s extension storage on this device. If you choose to sign in with Google, a copy is also kept in a private app folder in <strong>your own Google Drive</strong> (Google’s “app data” folder), so your other devices can share it. Only TubeStat can open that folder, it doesn’t appear in your Drive files, and the developer has no access to it. TubeStat has no server of its own. Uninstalling TubeStat deletes this device’s copy; “Delete everything” in Profile deletes both.</p>
 
     <h2>What leaves your device</h2>
     <p>Your viewing data never does. TubeStat makes only these network requests:</p>
     <ul>
       <li><strong>Images from YouTube’s servers</strong> (video thumbnails and channel pictures), to display them in your dashboard and draw share cards.</li>
       <li><strong>GitHub’s public release page,</strong> at most twice a day, to see whether a newer version of TubeStat is out. It’s a plain request for the latest version number and sends nothing about you. Copies installed from the Chrome Web Store skip it, and you can turn it off in Profile.</li>
-      <li><strong>The YouTube Data API, only if you choose to connect your account.</strong> This is off by default. If you turn it on, TubeStat asks Google for read-only access to your subscriptions, reads your subscription list and those channels’ public statistics, and stores the results on your device. The access token is kept in memory only for that sync and is never saved. TubeStat’s use of information received from Google APIs follows the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</li>
+      <li><strong>Google, only if you choose to sign in.</strong> This is off by default. Signing in asks Google for three things: your email address and name (to show which account is signed in), read-only access to your YouTube subscriptions (to learn when you subscribed, and those channels’ public statistics), and TubeStat’s own app folder in your Google Drive (to keep your stats there). TubeStat then syncs your stats with that folder about every half hour and reads your subscriptions about once a week. It can’t see or change any other file in your Drive, and can’t change anything on your YouTube account. Access tokens are kept in memory only and never saved. Signing out stops all of this; you can also remove TubeStat’s access in your Google account settings at any time. TubeStat’s use of information received from Google APIs follows the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</li>
     </ul>
 
     <h2>What friends see</h2>

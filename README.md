@@ -98,9 +98,16 @@ src/
 - All aggregates are derived from raw watches at read time, so improving a calculation improves all past data too.
 - Categories: YouTube's category first, then title keywords only to refine it within allowed narrower categories, then the channel's usual category for imported videos. Edit `KEYWORDS` / `YT_MAP` in `analytics/categories.ts` to improve accuracy.
 
-## Optional: subscription dates via the YouTube Data API
+## Optional: sign in with Google
 
-Profile → *Subscription dates from your YouTube account*. You create your own OAuth client (Web application) in Google Cloud, enable YouTube Data API v3, and add the redirect URI shown in the app. The connection is read-only (`youtube.readonly`), runs only when you press the button, and the token is never stored.
+Profile → **Sign in with Google**. One sign-in does two things:
+
+- **Account sync.** Stats are kept in the Drive app-data folder of the user's own Google account (`drive.appdata`): `core.json` (channels, subscriptions, groups), `replays.json`, and one `w-YYYY-MM.json` per month of watches, gzipped. The background worker syncs about every 30 minutes, downloading only files another device changed and uploading only files whose merged contents changed (`src/account/sync.ts`). Merging never deletes: watches combine by id, channels and subscriptions keep the newest details plus all history, and a `history` entry is dropped when another device tracked the same video (`src/account/merge.ts`). There's no TubeStat server.
+- **Subscription dates.** `youtube.readonly` reads when you subscribed to each channel, about weekly.
+
+Sign-in uses TubeStat's own OAuth client, `BUILT_IN_CLIENT_ID` in `src/account/google.ts`. Its redirect URI is the relay page `https://awnsh.github.io/tubestat/oauth.html` (`docs/oauth.html`), which forwards Google's answer to `https://<extension-id>.chromiumapp.org/` named in `state`; that lets one client serve every unpacked copy, whose IDs all differ. Tokens are never stored; background syncs get a fresh one with `prompt=none`.
+
+To set up the client: in Google Cloud Console enable **YouTube Data API v3** and **Google Drive API**, configure the consent screen (External; scopes `openid`, `email`, `profile`, `youtube.readonly`, `drive.appdata`; homepage and privacy policy on `awnsh.github.io`), and create a **Web application** client with the relay page as its redirect URI. `youtube.readonly` is a sensitive scope, so until Google verifies the app only listed test users (up to 100) can sign in. Developers can instead save their own client ID in Profile, which redirects straight to their copy's `chromiumapp.org` address.
 
 ## Friends and leaderboards
 
@@ -112,4 +119,4 @@ The mark is YouTube's played-progress bar forming the crossbar of a T, with the 
 
 ## Privacy
 
-No viewing data leaves the device. Network requests are only for YouTube thumbnails/avatars, GitHub's latest-release endpoint (the update check, below), and, if connected, the YouTube Data API. Export everything as JSON or delete everything from Profile.
+Signed out, no viewing data leaves the device: network requests are only for YouTube thumbnails/avatars and GitHub's latest-release endpoint (the update check, above). Signed in, stats also sync to the user's own Google Drive app folder, and subscriptions are read from the YouTube Data API. Export everything as JSON or delete everything from Profile.

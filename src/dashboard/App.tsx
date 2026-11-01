@@ -10,7 +10,6 @@ import { History } from '../pages/History';
 import { Insights } from '../pages/Insights';
 import { Leaderboard } from '../pages/Leaderboard';
 import { Profile } from '../pages/Profile';
-import { resyncQuietly } from '../youtube/api';
 import { dispatch } from '../lib/dispatch';
 
 const TITLES: Record<string, string> = Object.fromEntries(NAV.map((n) => [n.id, n.label]));
@@ -24,16 +23,10 @@ export function App() {
     document.title = `${TITLES[active] ?? 'TubeStat'} · TubeStat`;
   }, [active]);
 
-  const db = state.sample ? null : state.db;
+  // Waking the background worker lets it run a due account sync (it's throttled there).
   useEffect(() => {
-    if (!db) return;
-    resyncQuietly({
-      lastSync: db.meta.lastApiSync,
-      clientId: db.settings.googleClientId,
-      watchedChannelIds: Object.keys(db.channels),
-      apply: (payload) => dispatch({ type: 'api:apply', payload }),
-    });
-  }, [db]);
+    dispatch({ type: 'tracker:ping' }).catch(() => undefined);
+  }, []);
 
   if (!state.db || !state.analytics) return <div className="min-h-screen bg-ink" />;
 
