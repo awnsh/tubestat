@@ -3,7 +3,8 @@ import { href } from '../hooks/useRoute';
 import { useData } from '../hooks/useDatabase';
 import { formatSpan } from '../lib/format';
 import { Mark, TestStrip, cx } from './ui';
-import { UpdateNotice } from './UpdateNotice';
+import { CheckForUpdates, UpdateNotice } from './UpdateNotice';
+import { currentVersion } from '../update/check';
 
 export const NAV = [
   { id: 'overview', label: 'Overview' },
@@ -49,6 +50,8 @@ export function Shell({ active, children }: { active: string; children: ReactNod
               {sample ? 'Showing sample data' : tracking ? 'Tracking on' : 'Tracking paused'}
             </p>
             {!sample ? <p className="mt-1 text-faint">Recording for {formatSpan(Date.now() - db.meta.installedAt)}</p> : null}
+            <p className="mt-3 text-faint">TubeStat {currentVersion()}</p>
+            <CheckForUpdates compact />
           </div>
         </div>
       </aside>

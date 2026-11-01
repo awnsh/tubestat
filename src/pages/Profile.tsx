@@ -13,6 +13,7 @@ import { rangeFor } from '../analytics/periods';
 import { PageTitle } from '../components/Shell';
 import { Button, Provenance, Section, cx } from '../components/ui';
 import { currentVersion } from '../update/check';
+import { CheckForUpdates } from '../components/UpdateNotice';
 
 export function Profile() {
   const { analytics: a, db, sample, setSample, reload } = useData();
@@ -68,6 +69,7 @@ export function Profile() {
           <Toggle label="Replay Map on YouTube" detail="Shows which parts of a video you’ve already seen or replayed, right on the seek bar, with a chip to resume or jump to what you haven’t seen." on={db.settings.replayMap} disabled={sample} onChange={(v) => update({ replayMap: v })} />
           <Toggle label="Tell me when there’s a new version" detail={`You have TubeStat ${currentVersion()}. Twice a day TubeStat asks GitHub for the latest release number, and shows a notice if there’s a newer one. Copies from the Chrome Web Store are updated by Chrome and skip this.`} on={db.settings.checkUpdates} disabled={sample} onChange={(v) => update({ checkUpdates: v })} />
         </div>
+        <CheckForUpdates className="mt-4" />
       </Section>
 
       <Section title="Add more history" className="mt-16">

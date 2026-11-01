@@ -1,7 +1,57 @@
 import { useEffect, useState } from 'react';
 import { kvGet, kvSubscribe } from '../storage/kv';
-import { checkForUpdate, currentVersion, dismissUpdate, pendingUpdate, type UpdateState } from '../update/check';
-import { cx } from './ui';
+import { applyDownloadedUpdate, checkForUpdate, checkNow, currentVersion, dismissUpdate, pendingUpdate, type CheckResult, type UpdateState } from '../update/check';
+import { Button, cx } from './ui';
+
+/**
+ * "Check for updates": says you're up to date, or shows what's new. A newer
+ * zip release also brings back the banner at the top (even if you'd dismissed
+ * it), which has the download and the steps.
+ */
+export function CheckForUpdates({ compact = false, className }: { compact?: boolean; className?: string }) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<CheckResult | null>(null);
+  const check = async () => {
+    setBusy(true);
+    try {
+      setResult(await checkNow());
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const message = !result
+    ? null
+    : result.status === 'latest'
+      ? `You’re up to date (${result.version}).`
+      : result.status === 'available'
+        ? `TubeStat ${result.latest} is out. You have ${result.version}.`
+        : result.status === 'store-ready'
+          ? `TubeStat ${result.latest ?? 'update'} is downloaded and ready.`
+          : result.message;
+
+  return (
+    <div className={className}>
+      {compact ? (
+        <button onClick={check} disabled={busy} className="text-faint underline-offset-4 hover:text-paper hover:underline disabled:opacity-60">
+          {busy ? 'Checking…' : 'Check for updates'}
+        </button>
+      ) : (
+        <Button onClick={check} disabled={busy}>{busy ? 'Checking…' : 'Check for updates'}</Button>
+      )}
+      {message ? (
+        <p className={cx(compact ? 'mt-1' : 'mt-2 text-[13px]', result?.status === 'error' ? 'text-play' : 'text-dim')} role="status">
+          {message}{' '}
+          {result?.status === 'available' ? (
+            <a href={result.downloadUrl} target="_blank" rel="noreferrer" className="text-paper underline underline-offset-4">Download</a>
+          ) : result?.status === 'store-ready' ? (
+            <button onClick={applyDownloadedUpdate} className="text-paper underline underline-offset-4">Restart TubeStat to finish</button>
+          ) : null}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 /** The newer release waiting to be installed, if any. Kicks off a (throttled) check on mount. */
 export function useUpdate(): UpdateState | null {
