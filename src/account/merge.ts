@@ -103,11 +103,18 @@ export function mergeSubscriptions(local: Record<string, Subscription>, remote: 
     const newer = r.lastObserved > l.lastObserved ? r : l;
     // A date captured live beats one from the API, which beats none.
     const dated = (DATE_RANK[r.subscriptionDateSource ?? ''] ?? 0) > (DATE_RANK[l.subscriptionDateSource ?? ''] ?? 0) ? r : l;
+    // A count seen live beats an archive estimate; an estimate only counts if it was for the date kept.
+    const counted = [dated, dated === r ? l : r].find(
+      (s) => s.subscriberCountAtSubscription != null && (s.countAtSubscriptionSource !== 'archive' ? s === dated : s.subscriptionDate === dated.subscriptionDate),
+    );
     out[id] = {
       ...newer,
       subscriptionDate: dated.subscriptionDate,
       subscriptionDateSource: dated.subscriptionDateSource,
-      subscriberCountAtSubscription: dated.subscriberCountAtSubscription ?? newer.subscriberCountAtSubscription,
+      subscriberCountAtSubscription: counted?.subscriberCountAtSubscription ?? null,
+      countAtSubscriptionSource: counted?.countAtSubscriptionSource ?? null,
+      archive: counted?.archive ?? null,
+      archiveCheckedAt: Math.max(l.archiveCheckedAt ?? 0, r.archiveCheckedAt ?? 0) || null,
       firstObserved: Math.min(l.firstObserved, r.firstObserved),
     };
   }

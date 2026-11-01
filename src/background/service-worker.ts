@@ -8,6 +8,7 @@ import { newMeta } from '../storage/db';
 import type { TrackerMessage } from '../storage/schema';
 import { checkForUpdate } from '../update/check';
 import { importBackup, signOut, syncAll, syncInBackground } from '../account/sync';
+import { archiveInBackground, lookUpPastCounts } from '../youtube/archive-jobs';
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (!(await kvGet('meta'))) await kvSet({ meta: newMeta() });
@@ -21,11 +22,13 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // The worker wakes often while you watch YouTube; both are throttled.
 checkForUpdate();
 syncInBackground();
+archiveInBackground();
 
 function handle(msg: TrackerMessage): Promise<unknown> {
   if (msg.type === 'account:sync') return syncAll(msg.token, msg.user, msg.clientId);
   if (msg.type === 'account:signOut') return signOut(msg.token);
   if (msg.type === 'data:import') return importBackup(msg.json);
+  if (msg.type === 'archive:lookup') return lookUpPastCounts(msg.channelId ? { channelId: msg.channelId } : { limit: 40 });
   return handleMessage(msg);
 }
 

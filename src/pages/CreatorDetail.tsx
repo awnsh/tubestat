@@ -6,6 +6,9 @@ import { formatAudienceShare, formatCompact, formatDate, formatDuration, formatS
 import { Avatar, Button, Empty, OgBadge, Provenance, Section, Thumb } from '../components/ui';
 import { BarChart, GrowthLine } from '../components/charts';
 import { ShareDialog } from '../components/ShareDialog';
+import { dispatch } from '../lib/dispatch';
+import { isExtension } from '../storage/kv';
+import { requestArchivePermission, type ArchiveProgress } from '../youtube/archive-jobs';
 
 const SOURCE_TEXT = {
   observed: 'TubeStat saw you subscribe.',
@@ -94,7 +97,7 @@ export function CreatorDetail({ channelId }: { channelId: string }) {
         </dl>
         {sub?.active && !sub.subscriptionDate ? (
           <Provenance>
-            YouTube doesn’t show when you subscribed. TubeStat has seen you subscribed since {formatDate(sub.firstObserved)}. Connect your YouTube account in Profile to get the exact date.
+            YouTube doesn’t show when you subscribed. TubeStat has seen you subscribed since {formatDate(sub.firstObserved)}. Sign in with Google in Profile to get the exact date.
           </Provenance>
         ) : sub?.subscriptionDateSource ? (
           <Provenance>{SOURCE_TEXT[sub.subscriptionDateSource] ?? ''}</Provenance>
@@ -107,7 +110,10 @@ export function CreatorDetail({ channelId }: { channelId: string }) {
           <div className="grid grid-cols-2 gap-8 md:grid-cols-3">
             <Fact label="When you subscribed" big>{formatCompact(og.subscribersThen)}</Fact>
             <Fact label="Now" big>{formatCompact(og.subscribersNow)}</Fact>
-            <Fact label="Growth" big>+{formatCompact((og.subscribersNow ?? 0) - (og.subscribersThen ?? 0))}</Fact>
+            <Fact label="Growth" big>
+              {(og.subscribersNow ?? 0) >= (og.subscribersThen ?? 0) ? '+' : '−'}
+              {formatCompact(Math.abs((og.subscribersNow ?? 0) - (og.subscribersThen ?? 0)))}
+            </Fact>
           </div>
         ) : ch?.subscriberCount != null ? (
           <div className="grid grid-cols-2 gap-8 md:grid-cols-3">
@@ -117,6 +123,19 @@ export function CreatorDetail({ channelId }: { channelId: string }) {
         ) : (
           <p className="text-[14px] text-dim">TubeStat records subscriber counts whenever you open one of this creator’s videos.</p>
         )}
+        {og?.thenSource === 'archive' && og.archiveSnapshots?.length ? (
+          <Provenance>
+            {formatCompact(og.subscribersThen)} when you subscribed is an estimate from the Internet Archive’s{' '}
+            {og.archiveSnapshots.length > 1
+              ? `copies of their channel page from ${formatDate(og.archiveSnapshots[0], 'short')}, ${new Date(og.archiveSnapshots[0]).getFullYear()} and ${formatDate(og.archiveSnapshots[1], 'short')}, ${new Date(og.archiveSnapshots[1]).getFullYear()}, scaled to your date`
+              : `copy of their channel page from ${formatDate(og.archiveSnapshots[0])}`}
+            .{' '}
+            <a className="underline underline-offset-4 hover:text-paper" href={`https://web.archive.org/web/${new Date(og.archiveSnapshots[0]).toISOString().replace(/[-:T]/g, '').slice(0, 14)}/https://www.youtube.com/channel/${channelId}`} target="_blank" rel="noreferrer">
+              See the copy
+            </a>
+          </Provenance>
+        ) : null}
+        {sub?.subscriptionDate != null && og?.basis !== 'audience' ? <ArchiveLookup channelId={channelId} subscribedAt={sub.subscriptionDate} checkedAt={sub.archiveCheckedAt ?? null} /> : null}
         {ch && ch.subscriberHistory.length >= 2 ? (
           <div className="mt-8">
             <GrowthLine points={ch.subscriberHistory.map((h) => ({ t: h.t, v: h.count }))} format={(v) => `${formatCompact(v)} subscribers`} />
@@ -141,15 +160,17 @@ export function CreatorDetail({ channelId }: { channelId: string }) {
               <span className="text-paper">{og.tier}</span>: {TIER_DESCRIPTIONS[og.tier]}{' '}
               {og.basis === 'timing'
                 ? 'This is an estimate from dates alone. YouTube doesn’t publish past subscriber counts, so TubeStat can’t say how big the audience was then.'
-                : og.estimate
-                  ? 'The subscriber count on your subscription date is interpolated from TubeStat’s own snapshots.'
-                  : 'Based on the subscriber count TubeStat recorded when you subscribed.'}
+                : og.thenSource === 'archive'
+                  ? 'Their size when you subscribed is estimated from Internet Archive copies of their channel page, so treat it as approximate.'
+                  : og.estimate
+                    ? 'The subscriber count on your subscription date is interpolated from TubeStat’s own snapshots.'
+                    : 'Based on the subscriber count TubeStat recorded when you subscribed.'}
             </p>
           </div>
         ) : (
           <p className="max-w-2xl text-[14px] leading-relaxed text-dim">
             {sub?.active
-              ? 'OG status needs your subscription date. Connect your YouTube account in Profile, or it will be measured exactly for creators you subscribe to from now on.'
+              ? 'OG status needs your subscription date. Sign in with Google in Profile, or it will be measured exactly for creators you subscribe to from now on.'
               : 'Subscribe to this creator and TubeStat will record their size at that moment. That becomes your OG status as they grow.'}
           </p>
         )}
@@ -198,6 +219,39 @@ export function CreatorDetail({ channelId }: { channelId: string }) {
         />
       ) : null}
     </>
+  );
+}
+
+/** "How big were they when I subscribed?" — one Internet Archive lookup for this channel. */
+function ArchiveLookup({ channelId, subscribedAt, checkedAt }: { channelId: string; subscribedAt: number; checkedAt: number | null }) {
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const look = async () => {
+    // The permission prompt needs the click, so ask before anything else.
+    const granted = await requestArchivePermission();
+    if (!granted) return setStatus({ ok: false, text: 'Chrome didn’t give permission, so nothing was looked up.' });
+    setBusy(true);
+    setStatus({ ok: true, text: 'Looking for saved copies of their channel page…' });
+    try {
+      const r = await dispatch<ArchiveProgress>({ type: 'archive:lookup', channelId });
+      setStatus(r.found ? null : { ok: true, text: `The Internet Archive has no copy of their channel page close enough to ${formatDate(subscribedAt, 'month')}, so their size then can’t be estimated.` });
+    } catch (e) {
+      setStatus({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!isExtension) return null;
+  return (
+    <div className="mt-6 max-w-2xl rounded-lg border border-line-strong p-4">
+      <p className="text-[14px]">How big were they when you subscribed in {formatDate(subscribedAt, 'month')}?</p>
+      <p className="mt-1 text-[13px] text-dim">
+        YouTube doesn’t publish past subscriber counts, but the Internet Archive may have a saved copy of their channel page from then. TubeStat sends it this channel’s ID and nothing else.
+        {checkedAt && !status ? ` Last checked ${formatDate(checkedAt, 'short')}: nothing close enough was found.` : ''}
+      </p>
+      <Button className="mt-3" disabled={busy} onClick={look}>{busy ? 'Looking…' : 'Look it up on the Internet Archive'}</Button>
+      {status ? <p className={status.ok ? 'mt-2 text-[13px] text-dim' : 'mt-2 text-[13px] text-play'} role="status">{status.text}</p> : null}
+    </div>
   );
 }
 

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../hooks/useDatabase';
 import { exportAll, saveSettings } from '../storage/db';
-import { kvBytesInUse } from '../storage/kv';
-import type { Settings } from '../storage/schema';
+import { isExtension, kvBytesInUse } from '../storage/kv';
+import type { Settings, Subscription } from '../storage/schema';
+import { hasArchivePermission, removeArchivePermission, requestArchivePermission, type ArchiveProgress } from '../youtube/archive-jobs';
 import { dispatch } from '../lib/dispatch';
 import { parseTakeout } from '../youtube/takeout';
 import { authorize, hasBuiltInClient, redirectUri } from '../account/google';
@@ -74,6 +75,7 @@ export function Profile() {
           <OtherDevicesSource lastSync={db.meta.lastHistorySync} count={s.otherDeviceVideos} on={db.settings.syncHistoryPage} disabled={sample} onChange={(v) => update({ syncHistoryPage: v })} />
           <SubscriptionsSource lastSync={db.meta.lastSubscriptionSync} count={subs.length} />
           <SubscriptionDates disabled={sample} signedIn={!!account} clientId={db.settings.googleClientId} lastSync={db.meta.lastApiSync} onSaveClientId={(id) => update({ googleClientId: id })} />
+          <PastCounts disabled={sample} subscriptions={Object.values(db.subscriptions)} />
           <TakeoutSource disabled={sample} importedAt={db.meta.takeoutImportedAt} />
         </div>
       </Section>
@@ -87,7 +89,7 @@ export function Profile() {
             In Chrome’s extension storage on this device. If you sign in with Google, also in a private app folder in your own Google Drive, which only TubeStat can open and which doesn’t appear in your Drive files. TubeStat has no server of its own.
           </Privacy>
           <Privacy q="Does anything leave your device?">
-            Not unless you sign in. Signed out, TubeStat only makes network requests to load YouTube thumbnails and avatars and to ask GitHub for the latest version number (unless you turn that off above). Signed in, your stats also go to your own Google Drive app folder, and TubeStat reads your subscriptions from YouTube, read-only. Google sign-in tokens are kept in memory and never saved; only your account’s email and name are.
+            Not unless you sign in. Signed out, TubeStat only makes network requests to load YouTube thumbnails and avatars and to ask GitHub for the latest version number (unless you turn that off above). Signed in, your stats also go to your own Google Drive app folder, and TubeStat reads your subscriptions from YouTube, read-only. If you turn on Internet Archive estimates, web.archive.org is sent the IDs of channels you subscribe to, one at a time, and nothing else. Google sign-in tokens are kept in memory and never saved; only your account’s email and name are.
           </Privacy>
           <Privacy q="What friends see">
             Only what’s in your stat code, and only if you send it: your name, this week’s watch time, video count, creator count, and streaks. Never titles, channels, or history.
@@ -275,6 +277,67 @@ function TakeoutSource({ importedAt, disabled }: { importedAt: number | null; di
       </label>
       {status ? <p className={cx('mt-2 text-[13px]', status.ok ? 'text-dim' : 'text-play')} role="status">{status.text}</p> : null}
       <Provenance>The file is read on this device. Nothing is uploaded.</Provenance>
+    </div>
+  );
+}
+
+function PastCounts({ subscriptions, disabled }: { subscriptions: Subscription[]; disabled?: boolean }) {
+  const [on, setOn] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => {
+    hasArchivePermission().then(setOn);
+  }, []);
+  const dated = subscriptions.filter((s) => s.subscriptionDate != null);
+  const live = dated.filter((s) => s.subscriberCountAtSubscription != null && s.countAtSubscriptionSource !== 'archive').length;
+  const fromArchive = dated.filter((s) => s.countAtSubscriptionSource === 'archive').length;
+
+  const run = async () => {
+    setBusy(true);
+    setStatus({ ok: true, text: 'Looking up the Internet Archive…' });
+    try {
+      const r = await dispatch<ArchiveProgress>({ type: 'archive:lookup' });
+      setStatus({ ok: true, text: `Checked ${r.checked} ${r.checked === 1 ? 'channel' : 'channels'}, found ${r.found}.${r.remaining ? ` ${r.remaining} more will be checked in the background.` : ''}` });
+    } catch (e) {
+      setStatus({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggle = async (next: boolean) => {
+    if (next) {
+      // The permission prompt needs the click, so ask before anything else.
+      const granted = await requestArchivePermission();
+      setOn(granted);
+      if (granted) await run();
+      else setStatus({ ok: false, text: 'Chrome didn’t give permission, so nothing was looked up.' });
+    } else {
+      await removeArchivePermission();
+      setOn(false);
+      setStatus(null);
+    }
+  };
+
+  return (
+    <div>
+      <SourceHeader title="Their size when you subscribed" status={dated.length ? `${(live + fromArchive).toLocaleString()} of ${dated.length.toLocaleString()} known` : 'Needs subscription dates'} />
+      <p className="text-[14px] leading-relaxed text-dim">
+        YouTube doesn’t publish past subscriber counts. TubeStat knows them exactly for channels it saw you subscribe to. For older subscriptions, it can estimate them from the Internet Archive, which has saved copies of popular channel pages going back to 2006. Each estimate is labelled with the date of the copy it came from. Small channels often weren’t saved, so they can’t be estimated.
+      </p>
+      <div className="mt-2 max-w-2xl">
+        <Toggle
+          label="Estimate them from the Internet Archive"
+          detail="Sends web.archive.org one channel ID at a time, a few every 15 minutes. Nothing about you is sent. Chrome will ask for permission."
+          on={on}
+          disabled={disabled || busy || !isExtension}
+          onChange={toggle}
+        />
+      </div>
+      {on && !busy ? (
+        <Button className="mt-1" disabled={disabled} onClick={run}>Check more now</Button>
+      ) : null}
+      {status ? <p className={cx('mt-2 text-[13px]', status.ok ? 'text-dim' : 'text-play')} role="status">{status.text}</p> : null}
     </div>
   );
 }

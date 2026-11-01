@@ -86,8 +86,14 @@ export interface Subscription {
   /** Null when YouTube doesn't tell us when you subscribed. */
   subscriptionDate: number | null;
   subscriptionDateSource: DataSource | null;
-  /** Subscriber count at the moment you subscribed. Only known if captured live. */
+  /** Subscriber count at the moment you subscribed: captured live, or estimated from the Internet Archive. */
   subscriberCountAtSubscription: number | null;
+  /** Where that count came from. Missing on records from before 1.4, which were always captured live. */
+  countAtSubscriptionSource?: 'observed' | 'archive' | null;
+  /** For an archive estimate: when the snapshot(s) were taken, and whether two were interpolated. */
+  archive?: { snapshots: number[]; interpolated: boolean } | null;
+  /** Last time the Internet Archive was asked, so channels with no snapshots aren't asked every day. */
+  archiveCheckedAt?: number | null;
   currentSubscriberCount: number | null;
   /** First time the extension saw you subscribed. */
   firstObserved: number;
@@ -211,6 +217,8 @@ export type TrackerMessage =
   | { type: 'account:signOut'; token?: string }
   /** The text of a file from "Export everything", merged in. */
   | { type: 'data:import'; json: string }
+  /** Look up past subscriber counts now: one channel, or the next batch. */
+  | { type: 'archive:lookup'; channelId?: string }
   | { type: 'api:apply'; payload: ApiSyncPayload }
   | { type: 'data:deleteAll' }
   | { type: 'tracker:ping' };

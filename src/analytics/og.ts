@@ -5,7 +5,9 @@
  *
  * 1. Audience — subscriber count when you subscribed vs. now.
  *    Known exactly if the extension saw you subscribe, or interpolated from
- *    its own daily snapshots if your subscription date falls inside them.
+ *    its own daily snapshots if your subscription date falls inside them, or
+ *    estimated from Internet Archive copies of the channel page (always
+ *    labelled an estimate, with the snapshot dates).
  *    "You subscribed before ~97% of their current audience" = 1 − then/now.
  *
  * 2. Timing — where your subscription date falls in the channel's lifetime
@@ -32,6 +34,10 @@ export interface OgResult {
   /** How far into the channel's life you subscribed, 0–1 (timing basis). */
   lifetimeShare: number | null;
   subscribedAt: number;
+  /** Where "subscribers then" came from (audience basis). */
+  thenSource: 'live' | 'tracked' | 'archive' | null;
+  /** Internet Archive snapshot dates behind an archive estimate. */
+  archiveSnapshots: number[] | null;
 }
 
 /** Thresholds on the share of the current audience that arrived after you. */
@@ -84,14 +90,27 @@ export function computeOg(ch: Channel | undefined, sub: Subscription | undefined
   const at = sub.subscriptionDate;
   const current = ch.subscriberCount ?? sub.currentSubscriberCount;
 
-  let then: number | null = sub.subscriberCountAtSubscription;
+  let then: number | null = null;
   let estimate = false;
+  let thenSource: OgResult['thenSource'] = null;
+  const fromArchive = sub.countAtSubscriptionSource === 'archive';
+  if (sub.subscriberCountAtSubscription != null && !fromArchive) {
+    then = sub.subscriberCountAtSubscription;
+    thenSource = 'live';
+  }
+  // TubeStat's own daily snapshots beat the archive when they cover the date.
   if (then == null) {
     const fromHistory = countAt(ch, at);
     if (fromHistory) {
       then = fromHistory.count;
       estimate = fromHistory.interpolated;
+      thenSource = 'tracked';
     }
+  }
+  if (then == null && fromArchive && sub.subscriberCountAtSubscription != null) {
+    then = sub.subscriberCountAtSubscription;
+    estimate = true;
+    thenSource = 'archive';
   }
 
   if (then != null && current != null && current > 0) {
@@ -107,6 +126,8 @@ export function computeOg(ch: Channel | undefined, sub: Subscription | undefined
       growthMultiple: then > 0 ? current / then : null,
       lifetimeShare: null,
       subscribedAt: at,
+      thenSource,
+      archiveSnapshots: thenSource === 'archive' ? sub.archive?.snapshots ?? null : null,
     };
   }
 
@@ -123,6 +144,8 @@ export function computeOg(ch: Channel | undefined, sub: Subscription | undefined
       growthMultiple: null,
       lifetimeShare: share,
       subscribedAt: at,
+      thenSource: null,
+      archiveSnapshots: null,
     };
   }
   return null;

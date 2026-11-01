@@ -150,6 +150,8 @@ export function channelSeen(msg: Extract<TrackerMessage, { type: 'channel:seen' 
           sub.subscriptionDate = now;
           sub.subscriptionDateSource = 'observed';
           sub.subscriberCountAtSubscription = info.subscriberCount;
+          sub.countAtSubscriptionSource = info.subscriberCount != null ? 'observed' : null;
+          sub.archive = null;
         }
         subscriptions[info.channelId] = sub;
       }
@@ -214,6 +216,13 @@ export function applyApiSync(payload: ApiSyncPayload) {
       const sub = subscriptions[s.channelId] ?? blankSubscription(s.channelId, now);
       // A date captured live is equally real and also carries the subscriber count; keep it.
       if (sub.subscriptionDateSource !== 'observed') {
+        // An archive estimate was for the old date; look again for the new one.
+        if (sub.subscriptionDate !== s.subscribedAt && sub.countAtSubscriptionSource === 'archive') {
+          sub.subscriberCountAtSubscription = null;
+          sub.countAtSubscriptionSource = null;
+          sub.archive = null;
+          sub.archiveCheckedAt = null;
+        }
         sub.subscriptionDate = s.subscribedAt;
         sub.subscriptionDateSource = 'api';
       }
@@ -269,6 +278,27 @@ export function importTakeout(watches: Watch[], channelNames: Array<{ channelId:
 }
 
 const DAY_MS = 86_400_000;
+
+/**
+ * Records an Internet Archive estimate of a channel's size on your subscription
+ * date (or that none was found). Never replaces a count TubeStat saw live.
+ */
+export function applyArchiveCount(channelId: string, forDate: number, found: { count: number; snapshots: number[]; interpolated: boolean } | null) {
+  return locked(async () => {
+    const { subscriptions } = await loadCore();
+    const sub = subscriptions[channelId];
+    // The date may have changed (e.g. a fresher API sync) while the lookup ran.
+    if (!sub || sub.subscriptionDate !== forDate) return;
+    sub.archiveCheckedAt = Date.now();
+    const live = sub.subscriberCountAtSubscription != null && sub.countAtSubscriptionSource !== 'archive';
+    if (found && !live) {
+      sub.subscriberCountAtSubscription = found.count;
+      sub.countAtSubscriptionSource = 'archive';
+      sub.archive = { snapshots: found.snapshots, interpolated: found.interpolated };
+    }
+    await kvSet({ subscriptions });
+  });
+}
 
 /**
  * Adds entries read from youtube.com/feed/history: what you watched on your
