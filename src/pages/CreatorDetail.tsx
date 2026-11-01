@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../hooks/useDatabase';
 import { href } from '../hooks/useRoute';
 import { computeOg, TIER_DESCRIPTIONS, trackedGrowth } from '../analytics/og';
@@ -8,7 +8,7 @@ import { BarChart, GrowthLine } from '../components/charts';
 import { ShareDialog } from '../components/ShareDialog';
 import { dispatch } from '../lib/dispatch';
 import { isExtension } from '../storage/kv';
-import { requestArchivePermission, type ArchiveProgress } from '../youtube/archive-jobs';
+import { RETRY_AFTER_MS, type ArchiveProgress } from '../youtube/archive-jobs';
 
 const SOURCE_TEXT = {
   observed: 'TubeStat saw you subscribe.',
@@ -135,7 +135,7 @@ export function CreatorDetail({ channelId }: { channelId: string }) {
             </a>
           </Provenance>
         ) : null}
-        {sub?.subscriptionDate != null && og?.basis !== 'audience' ? <ArchiveLookup channelId={channelId} subscribedAt={sub.subscriptionDate} checkedAt={sub.archiveCheckedAt ?? null} /> : null}
+        {sub?.subscriptionDate != null && og?.basis !== 'audience' ? <ArchiveLookup channelId={channelId} subscribedAt={sub.subscriptionDate} checkedAt={sub.archiveCheckedAt ?? null} enabled={db.settings.archiveLookups} /> : null}
         {ch && ch.subscriberHistory.length >= 2 ? (
           <div className="mt-8">
             <GrowthLine points={ch.subscriberHistory.map((h) => ({ t: h.t, v: h.count }))} format={(v) => `${formatCompact(v)} subscribers`} />
@@ -222,37 +222,31 @@ export function CreatorDetail({ channelId }: { channelId: string }) {
   );
 }
 
-/** "How big were they when I subscribed?" — one Internet Archive lookup for this channel. */
-function ArchiveLookup({ channelId, subscribedAt, checkedAt }: { channelId: string; subscribedAt: number; checkedAt: number | null }) {
-  const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
-  const look = async () => {
-    // The permission prompt needs the click, so ask before anything else.
-    const granted = await requestArchivePermission();
-    if (!granted) return setStatus({ ok: false, text: 'Chrome didn’t give permission, so nothing was looked up.' });
-    setBusy(true);
-    setStatus({ ok: true, text: 'Looking for saved copies of their channel page…' });
-    try {
-      const r = await dispatch<ArchiveProgress>({ type: 'archive:lookup', channelId });
-      setStatus(r.found ? null : { ok: true, text: `The Internet Archive has no copy of their channel page close enough to ${formatDate(subscribedAt, 'month')}, so their size then can’t be estimated.` });
-    } catch (e) {
-      setStatus({ ok: false, text: (e as Error).message });
-    } finally {
-      setBusy(false);
-    }
-  };
-  if (!isExtension) return null;
-  return (
-    <div className="mt-6 max-w-2xl rounded-lg border border-line-strong p-4">
-      <p className="text-[14px]">How big were they when you subscribed in {formatDate(subscribedAt, 'month')}?</p>
-      <p className="mt-1 text-[13px] text-dim">
-        YouTube doesn’t publish past subscriber counts, but the Internet Archive may have a saved copy of their channel page from then. TubeStat sends it this channel’s ID and nothing else.
-        {checkedAt && !status ? ` Last checked ${formatDate(checkedAt, 'short')}: nothing close enough was found.` : ''}
-      </p>
-      <Button className="mt-3" disabled={busy} onClick={look}>{busy ? 'Looking…' : 'Look it up on the Internet Archive'}</Button>
-      {status ? <p className={status.ok ? 'mt-2 text-[13px] text-dim' : 'mt-2 text-[13px] text-play'} role="status">{status.text}</p> : null}
-    </div>
-  );
+/**
+ * Fills in "When you subscribed" by itself: when this page opens without that
+ * number, it asks the Internet Archive for this channel straight away. Only a
+ * one-line status shows; nothing to press.
+ */
+function ArchiveLookup({ channelId, subscribedAt, checkedAt, enabled }: { channelId: string; subscribedAt: number; checkedAt: number | null; enabled: boolean }) {
+  const due = enabled && isExtension && (!checkedAt || Date.now() - checkedAt > RETRY_AFTER_MS);
+  const [state, setState] = useState<'idle' | 'looking' | 'none' | 'error'>('idle');
+  useEffect(() => {
+    if (!due) return;
+    let live = true;
+    setState('looking');
+    dispatch<ArchiveProgress>({ type: 'archive:lookup', channelId })
+      .then((r) => live && setState(r.found ? 'idle' : 'none'))
+      .catch(() => live && setState('error'));
+    return () => {
+      live = false;
+    };
+  }, [channelId, subscribedAt, due]);
+
+  const month = formatDate(subscribedAt, 'month');
+  if (state === 'looking') return <Provenance>Looking up their size in {month} on the Internet Archive…</Provenance>;
+  if (state === 'error') return <Provenance>Couldn’t reach the Internet Archive just now. TubeStat will try again in the background.</Provenance>;
+  if (state === 'none' || (enabled && checkedAt)) return <Provenance>The Internet Archive has no copy of their channel page from around {month}, so their size then isn’t known.</Provenance>;
+  return null;
 }
 
 function Fact({ label, children, big }: { label: string; children: React.ReactNode; big?: boolean }) {

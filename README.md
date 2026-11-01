@@ -62,7 +62,7 @@ TubeStat was built around what YouTube actually exposes. It never invents histor
 | Subscriber counts | Watch page and subscriptions page (YouTube rounds to 3 digits) | Snapshotted daily from first visit |
 | Your subscriptions | `youtube.com/feed/channels` when you visit it | Verified |
 | **When** you subscribed | Not shown anywhere on YouTube's pages. Captured live when you subscribe while TubeStat is installed, or read from the YouTube Data API if you connect it | Verified when available |
-| Subscriber count when you subscribed | Captured live; else interpolated from TubeStat's own snapshots; else (opt-in) read from Internet Archive copies of the channel page near that date (`src/youtube/archive.ts`) | Verified, or labelled estimate with the snapshot date |
+| Subscriber count when you subscribed | Captured live; else interpolated from TubeStat's own snapshots; else read from Internet Archive copies of the channel page near that date (`src/youtube/archive.ts`) | Verified, or labelled estimate with the snapshot date |
 | Past subscriber counts | Not published by YouTube | Growth chart starts on first visit; only the subscription-date count is estimated from the archive |
 | History before install | Google Takeout `watch-history.json` import (dates, no watch time) | Verified videos; hours not counted |
 | Viewing on your phone and other devices | `youtube.com/feed/history` when you open it on desktop: day headings, plus how far the red resume bar reaches | Verified videos and days; watch time is an estimate (`length × bar`), Shorts add no hours |

@@ -114,6 +114,8 @@ export interface Settings {
   checkUpdates: boolean;
   /** Read youtube.com/feed/history when you open it, to add viewing from other devices. */
   syncHistoryPage: boolean;
+  /** Estimate channels' size on your subscription date from Internet Archive copies of their page. */
+  archiveLookups: boolean;
   displayName: string;
   /** OAuth client id for the optional YouTube Data API connection. */
   googleClientId: string;
@@ -184,6 +186,7 @@ export const DEFAULT_SETTINGS: Settings = {
   replayMap: true,
   checkUpdates: true,
   syncHistoryPage: true,
+  archiveLookups: true,
   displayName: '',
   googleClientId: '',
 };

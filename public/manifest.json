@@ -14,9 +14,10 @@
     "https://www.youtube.com/*",
     "https://i.ytimg.com/*",
     "https://yt3.ggpht.com/*",
-    "https://yt3.googleusercontent.com/*"
+    "https://yt3.googleusercontent.com/*",
+    "https://web.archive.org/*"
   ],
-  "optional_host_permissions": ["https://www.googleapis.com/*", "https://web.archive.org/*"],
+  "optional_host_permissions": ["https://www.googleapis.com/*"],
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
