@@ -8,6 +8,7 @@
  */
 import { BRIDGE_SOURCE, type BridgeMessage, type HistoryItem, type PlayerSample } from './bridge-protocol';
 import { handleFromUrl, parseCount, parseHistoryDay, parseLength } from './parse';
+import { historyFieldsOf } from './history-data';
 
 interface YtPlayer extends HTMLElement {
   getPlayerResponse?: () => any;
@@ -107,75 +108,43 @@ function scanSubscriptions() {
 
 /* ---------- youtube.com/feed/history: viewing from your phone and other devices ---------- */
 
-/** Depth-first search of YouTube's renderer data for the first value `pick` accepts. */
-function find(obj: any, pick: (key: string, value: any) => unknown, depth = 0): unknown {
-  if (!obj || typeof obj !== 'object' || depth > 12) return undefined;
-  for (const [k, v] of Object.entries(obj)) {
-    const hit = pick(k, v);
-    if (hit !== undefined && hit !== null && hit !== false) return hit;
-    const deeper = find(v, pick, depth + 1);
-    if (deeper !== undefined) return deeper;
-  }
-  return undefined;
-}
-
 const dataOf = (el: any) => el.data ?? el.__data?.data ?? el.polymerController?.data ?? null;
 
 /**
  * Reads one history entry, preferring the renderer data YouTube attached to the
- * element and falling back to what's drawn on the page. Both the older
- * ytd-video-renderer and the newer lockup view model are understood.
+ * element and falling back to what's drawn on the page.
  */
 function readHistoryEntry(el: Element, day: number): HistoryItem | null {
-  const d = dataOf(el);
+  const f = historyFieldsOf(dataOf(el));
   const link = el.querySelector('a[href*="/watch?v="], a[href*="/shorts/"]') as HTMLAnchorElement | null;
   const href = link?.getAttribute('href') ?? '';
-  const isShort = /shorts/i.test(el.tagName) || href.includes('/shorts/') || !!find(d, (k) => k === 'reelWatchEndpoint');
-  const videoId =
-    (d?.videoId as string) ||
-    (d?.contentId as string) ||
-    (find(d, (k, v) => (k === 'reelWatchEndpoint' || k === 'watchEndpoint') && v?.videoId) as string) ||
-    href.match(/[?&]v=([\w-]{6,})/)?.[1] ||
-    href.match(/\/shorts\/([\w-]{6,})/)?.[1];
+  const isShort = f.isShort || /shorts/i.test(el.tagName) || href.includes('/shorts/');
+  const videoId = f.videoId || href.match(/[?&]v=([\w-]{6,})/)?.[1] || href.match(/\/shorts\/([\w-]{6,})/)?.[1];
   if (!videoId) return null;
 
-  const title =
-    textOf(d?.title) ||
-    (find(d, (k, v) => (k === 'lockupMetadataViewModel' ? v?.title?.content : undefined)) as string) ||
-    (find(d, (k, v) => (k === 'primaryText' ? v?.content : undefined)) as string) ||
-    el.querySelector('#video-title, h3, .yt-lockup-metadata-view-model-wiz__title, [class*="title"]')?.textContent?.trim() ||
-    '';
-  const channelId = (find(d, (k, v) => k === 'browseId' && typeof v === 'string' && v.startsWith('UC') && v) as string) || '';
+  const title = f.title || el.querySelector('#video-title, h3, .yt-lockup-metadata-view-model-wiz__title, [class*="title"]')?.textContent?.trim() || '';
   const channelLink = el.querySelector('a[href^="/@"], a[href^="/channel/"]') as HTMLAnchorElement | null;
-  const channelName =
-    textOf(d?.ownerText) ||
-    textOf(d?.shortBylineText) ||
-    (find(d, (k, v) => (k === 'metadataParts' && Array.isArray(v) ? v[0]?.text?.content : undefined)) as string) ||
-    channelLink?.textContent?.trim() ||
-    '';
-  const handle = handleFromUrl(channelLink?.getAttribute('href')) ?? handleFromUrl(find(d, (k, v) => k === 'canonicalBaseUrl' && v) as string);
+  const channelName = f.channelName || channelLink?.textContent?.trim() || '';
+  const handle = handleFromUrl(channelLink?.getAttribute('href')) ?? f.handle;
 
-  const lengthText =
-    textOf(d?.lengthText) ||
-    (find(d, (k, v) => (k === 'text' && typeof v === 'string' && parseLength(v) != null ? v : undefined)) as string) ||
-    el.querySelector('ytd-thumbnail-overlay-time-status-renderer, badge-shape, .badge-shape-wiz__text')?.textContent?.trim();
+  const lengthText = f.lengthText || el.querySelector('ytd-thumbnail-overlay-time-status-renderer, badge-shape, .badge-shape-wiz__text')?.textContent?.trim();
   const duration = parseLength(lengthText) ?? 0;
 
-  let percent = find(d, (k, v) => (k === 'percentDurationWatched' || k === 'startPercent') && typeof v === 'number' && { v }) as { v: number } | undefined;
-  if (!percent) {
+  let percent = f.percent;
+  if (percent == null) {
     const bar = el.querySelector('#progress, [class*="progress-bar-segment"], [class*="ProgressBarSegment"]') as HTMLElement | null;
     const w = parseFloat(bar?.style.width ?? '');
-    if (Number.isFinite(w)) percent = { v: w };
+    if (Number.isFinite(w)) percent = w;
   }
   return {
     videoId,
     title,
-    channelId,
+    channelId: f.channelId,
     channelName,
     handle,
     day,
     duration,
-    percent: percent ? Math.max(0, Math.min(100, percent.v)) : null,
+    percent: percent != null ? Math.max(0, Math.min(100, percent)) : null,
     isShort,
   };
 }

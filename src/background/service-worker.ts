@@ -9,6 +9,7 @@ import type { TrackerMessage } from '../storage/schema';
 import { checkForUpdate } from '../update/check';
 import { importBackup, signOut, syncAll, syncInBackground } from '../account/sync';
 import { archiveInBackground, lookUpPastCounts } from '../youtube/archive-jobs';
+import { historyInBackground, readHistoryNow } from '../youtube/history-jobs';
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (!(await kvGet('meta'))) await kvSet({ meta: newMeta() });
@@ -19,15 +20,26 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   checkForUpdate({ force: true });
 });
 
-// The worker wakes often while you watch YouTube; both are throttled.
-checkForUpdate();
-syncInBackground();
-archiveInBackground();
+// The worker wakes often while you watch YouTube, and every 30 minutes from
+// the alarm, so phone viewing arrives even on days you don't open YouTube
+// here. Each job is throttled.
+function backgroundJobs() {
+  checkForUpdate();
+  syncInBackground();
+  archiveInBackground();
+  historyInBackground();
+}
+backgroundJobs();
+chrome.alarms.get('background', (a) => a || chrome.alarms.create('background', { periodInMinutes: 30 }));
+chrome.alarms.onAlarm.addListener((a) => {
+  if (a.name === 'background') backgroundJobs();
+});
 
 function handle(msg: TrackerMessage): Promise<unknown> {
   if (msg.type === 'account:sync') return syncAll(msg.token, msg.user, msg.clientId);
   if (msg.type === 'account:signOut') return signOut(msg.token);
   if (msg.type === 'data:import') return importBackup(msg.json);
+  if (msg.type === 'history:read') return readHistoryNow();
   if (msg.type === 'archive:lookup') return lookUpPastCounts(msg.channelId ? { channelId: msg.channelId } : { limit: 40 });
   return handleMessage(msg);
 }

@@ -46,7 +46,7 @@ To publish a release, run `npm run package`, then attach the zip to a GitHub rel
 
 ## Phone and other devices
 
-The extension can't see the YouTube app, but `youtube.com/feed/history` lists what you watched on every signed-in device. When you open it on desktop, `page-bridge.ts` reads each entry and the day heading it sits under ("Today", "Wednesday", "Oct 12", in the page's language), and the worker saves it as a `history` watch at noon that day. Anything TubeStat already tracked within a day either side is skipped. Watch time is `length × resume bar`, shown as an estimate. Shorts on the history page don't show a channel or a resume bar, so they add videos but no hours or creators. Turn it off in **Profile → Your phone and other devices**.
+The extension can't see the YouTube app, but `youtube.com/feed/history` lists what you watched on every signed-in device. About once an hour while the browser is open (a 30-minute `alarms` tick, throttled), the worker fetches that page with the browser's own YouTube sign-in and reads the newest entries from its `ytInitialData` (`src/youtube/history-jobs.ts`); **Profile → Check now** does it on demand. That only covers the first screen, a few days' worth, so for older viewing open the page and scroll: `page-bridge.ts` reads each entry and the day heading it sits under ("Today", "Wednesday", "Oct 12", in the page's language), and the worker saves it as a `history` watch at noon that day. Anything TubeStat already tracked within a day either side is skipped. Watch time is `length × resume bar`, shown as an estimate. Shorts on the history page don't show a channel or a resume bar, so they add videos but no hours or creators. Turn it off in **Profile → Your phone and other devices**.
 
 ## What can and can't be known
 
@@ -65,7 +65,7 @@ TubeStat was built around what YouTube actually exposes. It never invents histor
 | Subscriber count when you subscribed | Captured live; else interpolated from TubeStat's own snapshots; else read from Internet Archive copies of the channel page near that date (`src/youtube/archive.ts`) | Verified, or labelled estimate with the snapshot date |
 | Past subscriber counts | Not published by YouTube | Growth chart starts on first visit; only the subscription-date count is estimated from the archive |
 | History before install | Google Takeout `watch-history.json` import (dates, no watch time) | Verified videos; hours not counted |
-| Viewing on your phone and other devices | `youtube.com/feed/history` when you open it on desktop: day headings, plus how far the red resume bar reaches | Verified videos and days; watch time is an estimate (`length × bar`), Shorts add no hours |
+| Viewing on your phone and other devices | `youtube.com/feed/history`, read hourly in the background and when you open it: day headings, plus how far the red resume bar reaches | Verified videos and days; watch time is an estimate (`length × bar`), Shorts add no hours |
 
 ### OG status
 
@@ -119,4 +119,4 @@ The mark is YouTube's played-progress bar forming the crossbar of a T, with the 
 
 ## Privacy
 
-Signed out, no viewing data leaves the device: network requests are only for YouTube thumbnails/avatars and GitHub's latest-release endpoint (the update check, above). Signed in, stats also sync to the user's own Google Drive app folder, and subscriptions are read from the YouTube Data API. Export everything as JSON or delete everything from Profile.
+Signed out, no viewing data leaves the device: network requests are only for YouTube thumbnails/avatars, the hourly read of your own `youtube.com/feed/history`, Internet Archive lookups, and GitHub's latest-release endpoint (the update check, above). Signed in, stats also sync to the user's own Google Drive app folder, and subscriptions are read from the YouTube Data API. Export everything as JSON or delete everything from Profile.

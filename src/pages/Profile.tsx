@@ -5,6 +5,7 @@ import { kvBytesInUse } from '../storage/kv';
 import type { Settings, Subscription } from '../storage/schema';
 import { dispatch } from '../lib/dispatch';
 import { parseTakeout } from '../youtube/takeout';
+import type { HistoryReadResult } from '../youtube/history-jobs';
 import { authorize, hasBuiltInClient, redirectUri } from '../account/google';
 import { AccountSection, useAccount } from '../components/Account';
 import { formatDate, formatDuration, formatSpan } from '../lib/format';
@@ -177,18 +178,48 @@ function SourceHeader({ title, status }: { title: string; status: React.ReactNod
   );
 }
 
+const HISTORY_READ_TEXT: Record<Exclude<HistoryReadResult['status'], 'read'>, string> = {
+  'signed-out': 'You’re not signed in to YouTube in this browser. Sign in on youtube.com with the account your phone uses.',
+  empty: 'Your YouTube history is empty or paused. Turn it on at myactivity.google.com.',
+  unreadable: 'YouTube’s page didn’t look as expected. Opening it yourself still works.',
+};
+
 function OtherDevicesSource({ lastSync, count, on, disabled, onChange }: { lastSync: number | null; count: number; on: boolean; disabled?: boolean; onChange: (v: boolean) => void }) {
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const readNow = async () => {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const r = await dispatch<HistoryReadResult>({ type: 'history:read' });
+      setStatus(
+        r.status === 'read'
+          ? { ok: true, text: r.added ? `Added ${r.added.toLocaleString()} new ${r.added === 1 ? 'video' : 'videos'}.` : `Up to date. YouTube listed ${r.seen.toLocaleString()} recent videos, all already here.` }
+          : { ok: false, text: HISTORY_READ_TEXT[r.status] },
+      );
+    } catch (e) {
+      setStatus({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <div>
       <SourceHeader title="Your phone and other devices" status={lastSync ? `${count.toLocaleString()} videos, read ${formatSpan(Date.now() - lastSync)} ago`.replace('today ago', 'today') : 'Not read yet'} />
       <p className="text-[14px] leading-relaxed text-dim">
-        TubeStat can’t see the YouTube app on your phone, but your YouTube history can: it lists what you watched on every device signed in to your account. Open it on this computer and scroll back as far as you want to bring in. TubeStat adds each video on the day YouTube lists it, skips anything it already recorded here, and estimates watch time from how far the red bar under the thumbnail reaches. Shorts count as videos, but YouTube doesn’t show how long you watched them, so they don’t add hours.
+        TubeStat can’t see the YouTube app on your phone, but your YouTube history can: it lists what you watched on every device signed in to your account. While this browser is open, TubeStat reads the newest entries about once an hour, so viewing on your phone, TV or other computers shows up here on its own. To bring in older viewing, open your history on this computer and scroll back as far as you want. TubeStat adds each video on the day YouTube lists it, skips anything it already recorded here, and estimates watch time from how far the red bar under the thumbnail reaches. Shorts count as videos, but YouTube doesn’t show how long you watched them, so they don’t add hours.
       </p>
-      <a href="https://www.youtube.com/feed/history" target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-lg border border-line-strong px-4 py-2 text-[14px] hover:bg-raise-2">
-        Open YouTube history
-      </a>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button type="button" onClick={readNow} disabled={busy || disabled || !on} className="inline-flex rounded-lg border border-line-strong px-4 py-2 text-[14px] hover:bg-raise-2 disabled:pointer-events-none disabled:opacity-40">
+          {busy ? 'Checking…' : 'Check now'}
+        </button>
+        <a href="https://www.youtube.com/feed/history" target="_blank" rel="noreferrer" className="inline-flex rounded-lg border border-line-strong px-4 py-2 text-[14px] hover:bg-raise-2">
+          Open YouTube history
+        </a>
+      </div>
+      {status ? <p className={cx('mt-2 text-[13px]', status.ok ? 'text-dim' : 'text-play')} role="status">{status.text}</p> : null}
       <div className="mt-2 max-w-2xl">
-        <Toggle label="Read my YouTube history page when I open it" detail="Only when you visit youtube.com/feed/history yourself. YouTube history has to be turned on in your Google account." on={on} disabled={disabled} onChange={onChange} />
+        <Toggle label="Read my YouTube history" detail="Hourly in the background, and when you open youtube.com/feed/history. Uses this browser’s YouTube sign-in; the request goes only to YouTube. YouTube history has to be turned on in your Google account." on={on} disabled={disabled} onChange={onChange} />
       </div>
     </div>
   );

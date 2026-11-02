@@ -112,7 +112,7 @@ export interface Settings {
   replayMap: boolean;
   /** Ask GitHub for new releases (copies not installed from the Web Store). */
   checkUpdates: boolean;
-  /** Read youtube.com/feed/history when you open it, to add viewing from other devices. */
+  /** Read youtube.com/feed/history (hourly in the background, and when you open it) to add viewing from other devices. */
   syncHistoryPage: boolean;
   /** Estimate channels' size on your subscription date from Internet Archive copies of their page. */
   archiveLookups: boolean;
@@ -222,6 +222,8 @@ export type TrackerMessage =
   | { type: 'data:import'; json: string }
   /** Look up past subscriber counts now: one channel, or the next batch. */
   | { type: 'archive:lookup'; channelId?: string }
+  /** Read youtube.com/feed/history now, without opening it. */
+  | { type: 'history:read' }
   | { type: 'api:apply'; payload: ApiSyncPayload }
   | { type: 'data:deleteAll' }
   | { type: 'tracker:ping' };
